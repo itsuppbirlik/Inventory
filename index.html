@@ -50,6 +50,19 @@
   .modal label.chk input{width:20px;height:20px}
   #loginBox{z-index:30;background:var(--bg);justify-content:center;color:var(--tx)}
   #loginBox .card{width:100%;max-width:420px}
+  /* Аккуратная мобильная навигация: равномерные промежутки и удобные зоны нажатия */
+  header{gap:8px;padding:8px 10px;scrollbar-width:thin;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+  header button{flex:0 0 auto;min-width:max-content;min-height:42px;padding:10px 13px;line-height:1.25;border:1px solid transparent}
+  header button.on{box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  @media(max-width:600px){
+    header{gap:6px;padding:7px 8px}
+    header button{font-size:14px;padding:9px 11px;border-radius:9px}
+    main{padding:10px}
+    .card{padding:12px}
+    .item{gap:8px}
+    .item button{min-width:40px;min-height:40px;padding:8px}
+    .btns{gap:8px}
+  }
 </style>
 </head>
 <body>
@@ -293,9 +306,26 @@ function startApp(){
   $('#who').innerHTML='Вы вошли как <b>'+esc(sess.login)+'</b> ('+(sess.role==='admin'?'администратор':'пользователь')+')';
   $('#loginBox').classList.remove('on');
   buildForm();buildSettings();updCnt();clearForm(false);
-  syMsg('');
-  // проверка, что пароль не менялся
-  api(sess,'login').then(flush).catch(e=>{if(e.code==='auth')logout('Пароль изменён. Войдите заново.')});
+  syMsg('Проверяю данные аккаунта…');
+  // При входе сначала загружаем записи аккаунта с сервера, а не полагаемся на память телефона/компьютера.
+  // Несинхронизированные локальные изменения сохраняются, серверные записи имеют приоритет при совпадении ID.
+  api(sess,'login').then(async()=>{
+    try{
+      const remote=await api(sess,'pull',{scope:'mine'});
+      const serverItems=Array.isArray(remote.items)?remote.items:[];
+      const merged=new Map(serverItems.map(x=>{const {owner,...rest}=x;return [String(rest.id),rest]}));
+      const pending=new Set(sync.up||[]);
+      items.forEach(x=>{if(!merged.has(String(x.id))&&pending.has(x.id))merged.set(String(x.id),x)});
+      items=[...merged.values()];
+      save(DB_KEY,items);updCnt();showSize();
+      syMsg('Данные аккаунта загружены ✓ Устройств: '+items.length);
+      // После подтягивания серверной базы отправляем только очередь изменений, ожидавшую синхронизации.
+      flush();
+    }catch(e){
+      syMsg('Не удалось загрузить данные из таблицы: '+e.message+'. Локальная копия сохранена.');
+      flush();
+    }
+  }).catch(e=>{if(e.code==='auth')logout('Пароль изменён. Войдите заново.')});
 }
 
 /* ============ ВКЛАДКИ ============ */
