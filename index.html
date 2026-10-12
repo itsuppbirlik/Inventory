@@ -187,7 +187,7 @@ const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwRtgBU3CPhHoy2fymhU_O
 
 const FIELDS = [
   {k:'asset',  l:'Инвентарный (asset) номер', cam:true},
-  {k:'name',   l:'Наименование устройства', ph:'Ноутбук, монитор, принтер...'},
+  {k:'name',   l:'Наименование устройства (тип)', opts:true, ph:'Можно уточнить, например: Принтер HP LaserJet'},
   {k:'model',  l:'Модель', cam:true},
   {k:'serial', l:'Серийный номер', cam:true},
   {k:'maker',  l:'Производитель', cam:true},
@@ -195,6 +195,13 @@ const FIELDS = [
   {k:'place',  l:'Местонахождение'},
   {k:'cond',   l:'Состояние / причина списания', ph:'Не включается, износ, устарел...'},
   {k:'price',  l:'Балансовая стоимость'}
+];
+// Список типов устройств — можно менять/добавлять свои:
+const DEVICE_TYPES = [
+  'Ноутбук','Системный блок','Моноблок','Монитор','Клавиатура','Мышь',
+  'Принтер','МФУ','Сканер','Проектор','Телевизор',
+  'IP-телефон (SIP)','Телефон стационарный','Смартфон','Мобильный телефон','Планшет',
+  'ИБП (UPS)','Коммутатор','Маршрутизатор','Точка доступа Wi-Fi','Сервер','Видеокамера','Web-камера','Гарнитура / наушники'
 ];
 const SETTINGS = [
   {k:'org',    l:'Организация'},
@@ -298,18 +305,29 @@ document.querySelectorAll('header button').forEach(b=>b.onclick=()=>{
 function buildForm(){
   $('#fields').innerHTML=FIELDS.map(f=>`
     <label>${f.l}</label>
+    ${f.opts?`<select id="t_${f.k}" style="margin-bottom:6px"><option value="">— выберите из списка —</option>${DEVICE_TYPES.map(t=>`<option>${esc(t)}</option>`).join('')}<option value="__other">Другое (ввести вручную)</option></select>`:''}
     <div class="row">
       <input id="f_${f.k}" placeholder="${f.ph||''}" autocomplete="off">
       ${f.cam?`<button class="cam" type="button" data-cam="${f.k}" title="Сканировать камерой">📷</button>`:''}
     </div>`).join('');
   document.querySelectorAll('[data-cam]').forEach(b=>b.onclick=()=>startScan(b.dataset.cam));
+  document.querySelectorAll('select[id^="t_"]').forEach(sl=>{
+    const k=sl.id.slice(2),inp=$('#f_'+k);
+    sl.onchange=()=>{if(sl.value==='__other'){inp.value='';inp.focus()}else inp.value=sl.value};
+    inp.oninput=()=>syncSel(k);
+  });
+}
+function syncSel(k){
+  const sl=$('#t_'+k);if(!sl)return;
+  const v=$('#f_'+k).value.trim();
+  sl.value=DEVICE_TYPES.includes(v)?v:(v?'__other':'');
 }
 function readForm(){const o={};FIELDS.forEach(f=>o[f.k]=$('#f_'+f.k).value.trim());return o}
-function fillForm(o){FIELDS.forEach(f=>$('#f_'+f.k).value=o?.[f.k]||'')}
+function fillForm(o){FIELDS.forEach(f=>{$('#f_'+f.k).value=o?.[f.k]||'';if(f.opts)syncSel(f.k)})}
 function clearForm(keepPlace){
-  const place=$('#f_place').value, cond=$('#f_cond').value, year=$('#f_year').value;
+  const place=$('#f_place').value, cond=$('#f_cond').value, year=$('#f_year').value, nm=$('#f_name').value;
   fillForm({}); editId=null; $('#formTitle').textContent='Новое устройство';
-  if(keepPlace){$('#f_place').value=place;$('#f_cond').value=cond;$('#f_year').value=year}
+  if(keepPlace){$('#f_place').value=place;$('#f_cond').value=cond;$('#f_year').value=year;$('#f_name').value=nm;syncSel('name')}
   $('#chips').innerHTML='';$('#ocrStatus').textContent='';
 }
 function saveItem(next){
