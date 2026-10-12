@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Списание устройств</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<style>
+  :root{--bg:#f5f6f8;--card:#fff;--tx:#1b1f24;--mut:#667;--ac:#1a56db;--bd:#d9dde3;--ok:#0a7d3b;--bad:#c0262d}
+  @media (prefers-color-scheme:dark){:root{--bg:#14171a;--card:#1d2126;--tx:#e8eaed;--mut:#9aa3ad;--ac:#6ea0ff;--bd:#323941}}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:40px}
+  header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--bd);display:flex;gap:6px;padding:8px;overflow-x:auto}
+  header button{flex:1;min-width:90px;padding:10px;border:0;border-radius:8px;background:transparent;color:var(--tx);font-size:15px;cursor:pointer;white-space:nowrap}
+  header button.on{background:var(--ac);color:#fff}
+  main{max-width:720px;margin:0 auto;padding:12px}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+  h2{margin:0 0 10px;font-size:18px}
+  label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+  .row{display:flex;gap:6px}
+  input,select,textarea{width:100%;padding:11px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font-size:16px}
+  .cam{flex:0 0 48px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);font-size:22px;cursor:pointer}
+  button.btn{padding:12px 16px;border:0;border-radius:8px;background:var(--ac);color:#fff;font-size:16px;cursor:pointer}
+  button.sec{background:var(--bg);color:var(--tx);border:1px solid var(--bd)}
+  button.del{background:var(--bad)}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chip{padding:7px 10px;border-radius:16px;background:var(--bg);border:1px solid var(--ac);color:var(--ac);font-size:14px;cursor:pointer}
+  .status{font-size:13px;color:var(--mut);margin-top:6px}
+  .item{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--bd)}
+  .item:first-child{border-top:0}
+  .item input[type=checkbox]{width:22px;height:22px;margin-top:2px;flex:0 0 22px}
+  .item .t{flex:1;font-size:14px;word-break:break-word}
+  .item .t b{font-size:15px}
+  .item button{padding:8px 10px}
+  .small{font-size:13px;color:var(--mut)}
+  .hide{display:none}
+  .adm{display:none}
+  body.admin .adm{display:block}
+  .toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:40;opacity:0;transition:.3s;pointer-events:none;max-width:90%;text-align:center}
+  .toast.on{opacity:1}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:20;display:none;flex-direction:column;align-items:center;padding:10px;overflow:auto;color:#fff}
+  .modal.on{display:flex}
+  #cropCv{touch-action:none;max-width:100%;border-radius:6px;background:#000}
+  .modal .btns{justify-content:center}
+  .modal label.chk{display:flex;gap:8px;align-items:center;color:#ddd;font-size:14px;margin:10px 0 0}
+  .modal label.chk input{width:20px;height:20px}
+  #loginBox{z-index:30;background:var(--bg);justify-content:center;color:var(--tx)}
+  #loginBox .card{width:100%;max-width:420px}
+</style>
+</head>
+<body>
+<header>
+  <button data-tab="add" class="on">➕ Добавить</button>
+  <button data-tab="list">📋 Список (<span id="cnt">0</span>)</button>
+  <button data-tab="docs">📄 Документы</button>
+  <button data-tab="users" class="adm">👥 Пользователи</button>
+  <button data-tab="data">💾 Данные</button>
+</header>
+<main>
+
+<!-- ДОБАВИТЬ -->
+<section id="tab-add">
+  <div class="card">
+    <h2 id="formTitle">Новое устройство</h2>
+    <div id="fields"></div>
+    <div class="status" id="ocrStatus"></div>
+    <div class="chips" id="chips"></div>
+    <div class="btns">
+      <button class="btn" id="save">Сохранить</button>
+      <button class="btn sec" id="saveNext">Сохранить и следующее</button>
+      <button class="btn sec" id="clear">Очистить</button>
+    </div>
+  </div>
+</section>
+
+<!-- СПИСОК -->
+<section id="tab-list" class="hide">
+  <div class="card">
+    <select id="scope" class="adm" style="margin-bottom:10px">
+      <option value="mine">Мои устройства</option>
+      <option value="all">Все пользователи</option>
+    </select>
+    <input id="q" placeholder="Поиск по номеру, модели, серийному...">
+    <div class="btns">
+      <button class="btn sec" id="selAll">Выбрать все</button>
+      <button class="btn sec" id="selNone">Снять выбор</button>
+    </div>
+    <div id="items"></div>
+  </div>
+</section>
+
+<!-- ДОКУМЕНТЫ -->
+<section id="tab-docs" class="hide">
+  <div class="card">
+    <h2>Реквизиты документов</h2>
+    <div id="settings"></div>
+    <p class="small">Документы создаются для устройств, отмеченных галочкой во вкладке «Список». Сейчас отмечено: <b id="selCnt">0</b>.</p>
+    <div class="btns">
+      <button class="btn" id="mkAct">Скачать АКТ по шаблону (.xlsx)</button>
+      <button class="btn" id="mkExp">Скачать заключение по шаблону (.xlsx)</button>
+    </div>
+  </div>
+</section>
+
+<!-- ПОЛЬЗОВАТЕЛИ (только админ) -->
+<section id="tab-users" class="hide">
+  <div class="card">
+    <h2>Новый пользователь</h2>
+    <label>Логин (латиница, цифры, . _ -)</label>
+    <input id="nuLogin" autocapitalize="none" autocomplete="off">
+    <label>Пароль (минимум 6 символов)</label>
+    <input id="nuPass" autocomplete="off">
+    <div class="btns"><button class="btn" id="nuAdd">Создать</button></div>
+  </div>
+  <div class="card">
+    <h2>Пользователи</h2>
+    <div id="usersList"><p class="small">Загрузка...</p></div>
+  </div>
+</section>
+
+<!-- ДАННЫЕ -->
+<section id="tab-data" class="hide">
+  <div class="card">
+    <h2>☁️ Аккаунт и синхронизация</h2>
+    <p id="who" style="margin:0 0 6px"></p>
+    <p class="small" id="syState"></p>
+    <div class="btns">
+      <button class="btn sec" id="syPush">Отправить всё в таблицу</button>
+      <button class="btn sec" id="syPull">Загрузить из таблицы</button>
+      <button class="btn sec" id="logout">Выйти</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Резервная копия</h2>
+    <p class="small">Изменения сами уходят в Google Таблицу. Файл можно скачать как дополнительную копию. Фото не сохраняются, только текст.</p>
+    <div class="btns">
+      <button class="btn" id="exp">⬇️ Скачать базу (.json)</button>
+      <button class="btn sec" id="impBtn">⬆️ Загрузить базу</button>
+      <button class="btn sec" id="csv">Скачать Excel (.xlsx)</button>
+      <input type="file" id="imp" accept=".json,application/json" class="hide">
+    </div>
+    <p class="small" id="size"></p>
+    <div class="btns"><button class="btn del" id="wipe">Очистить на этом устройстве</button></div>
+  </div>
+</section>
+
+</main>
+
+<!-- ВХОД -->
+<div class="modal on" id="loginBox">
+  <div class="card">
+    <h2>Вход</h2>
+    <div id="lgUrlRow">
+      <label>Ссылка веб-приложения (заканчивается на /exec)</label>
+      <input id="lgUrl" placeholder="https://script.google.com/macros/s/.../exec" autocapitalize="none">
+    </div>
+    <label>Логин</label>
+    <input id="lgLogin" autocapitalize="none" autocomplete="username">
+    <label>Пароль</label>
+    <input id="lgPass" type="password" autocomplete="current-password">
+    <p class="small" id="lgMsg" style="min-height:18px"></p>
+    <div class="btns"><button class="btn" id="lgGo" style="width:100%">Войти</button></div>
+  </div>
+</div>
+
+<!-- ОБРЕЗКА ФОТО -->
+<div class="modal" id="cropModal">
+  <p style="margin:6px 0;text-align:center;font-size:15px">Обведите пальцем только нужную строку (номер, серийник)</p>
+  <canvas id="cropCv"></canvas>
+  <label class="chk"><input type="checkbox" id="bw"> Чёрно-белый режим (если не читает)</label>
+  <p id="cropSt" style="margin:6px 0;font-size:14px;color:#9cf;text-align:center"></p>
+  <div class="btns">
+    <button class="btn" id="cropGo">Распознать</button>
+    <button class="btn sec" id="cropAll">Всё фото</button>
+    <button class="btn sec" id="cropCancel">Отмена</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<input type="file" id="photo" accept="image/*" capture="environment" class="hide">
+
+<script>
+/* ============ НАСТРОЙКИ ============ */
+// Можно вписать сюда ссылку /exec, тогда её не придётся вводить на каждом устройстве:
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwRtgBU3CPhHoy2fymhU_OUGUbsg9UArDwBBO_OixRXZ9mGAHhhUx1r73F8ZevQ45G1/exec';
+
+const FIELDS = [
+  {k:'asset',  l:'Инвентарный (asset) номер', cam:true},
+  {k:'name',   l:'Наименование устройства (тип)', opts:true, ph:'Можно уточнить, например: Принтер HP LaserJet'},
+  {k:'model',  l:'Модель', cam:true},
+  {k:'serial', l:'Серийный номер', cam:true},
+  {k:'maker',  l:'Производитель', cam:true},
+  {k:'year',   l:'Год выпуска / ввода'},
+  {k:'place',  l:'Местонахождение'},
+  {k:'cond',   l:'Состояние / причина списания', ph:'Не включается, износ, устарел...'},
+  {k:'price',  l:'Балансовая стоимость'}
+];
+// Список типов устройств — можно менять/добавлять свои:
+const DEVICE_TYPES = [
+  'Ноутбук','Системный блок','Моноблок','Монитор','Клавиатура','Мышь',
+  'Принтер','МФУ','Сканер','Проектор','Телевизор',
+  'IP-телефон (SIP)','Телефон стационарный','Смартфон','Мобильный телефон','Планшет',
+  'ИБП (UPS)','Коммутатор','Маршрутизатор','Точка доступа Wi-Fi','Сервер','Видеокамера','Web-камера','Гарнитура / наушники'
+];
+const EXPERTS = ['Sarsen Sundetov','Malik Kalybayev'];
+const COST_CENTERS = ['178600','178500','178200','178400','178420','178000'];
+const todayText = () => new Date().toLocaleDateString('ru-RU');
+const SETTINGS = [
+  {k:'org',l:'Организация'},
+  {k:'city',l:'Город'},
+  {k:'docNo',l:'Номер документа'},
+  {k:'date',l:'Дата документа'},
+  {k:'costCenter',l:'Центр затрат',type:'cost'},
+  {k:'location',l:'Местонахождение'},
+  {k:'chair',l:'Председатель комиссии (должность, ФИО)'},
+  {k:'members',l:'Члены комиссии (каждый с новой строки)',area:true},
+  {k:'expert',l:'Эксперт',type:'expert'},
+  {k:'basis',l:'Основание (приказ №, дата)'}
+];
+
+/* ============ ХРАНИЛИЩЕ (отдельное для каждого пользователя) ============ */
+const SESS_KEY='writeoff_session_v2';
+let DB_KEY='',ST_KEY='',SY_KEY='';
+const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast('Не удалось сохранить в браузере!')}};
+let items=[], settings={}, editId=null, sess=null, allItems=[], allMode=false, sync={up:[],rm:[]};
+const sel=new Set();
+const K=x=>(x.owner||(sess&&sess.login)||'')+'|'+x.id;
+
+const $=s=>document.querySelector(s);
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),2600)}
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ============ СЕРВЕР ============ */
+const ERR={auth:'неверный логин или пароль',locked:'слишком много попыток, подождите 10 минут'};
+async function api(s,action,body={}){
+  const r=await fetch(s.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify({action,login:s.login,pass:s.pass,...body})});
+  const j=await r.json();
+  if(j.error){const e=new Error(ERR[j.error]||j.error);e.code=j.error;throw e}
+  return j;
+}
+
+/* ============ ВХОД / ВЫХОД ============ */
+const lgMsg=t=>{$('#lgMsg').textContent=t};
+function initLogin(){
+  const saved=localStorage.getItem('writeoff_url')||'';
+  $('#lgUrl').value=SCRIPT_URL||saved;
+  $('#lgUrlRow').classList.toggle('hide',!!SCRIPT_URL);
+  $('#lgPass').value='';lgMsg('');
+  $('#loginBox').classList.add('on');
+}
+$('#lgGo').onclick=async()=>{
+  const url=(SCRIPT_URL||$('#lgUrl').value).trim(), login=$('#lgLogin').value.trim().toLowerCase(), pass=$('#lgPass').value;
+  if(!url||!login||!pass){lgMsg('Заполните все поля');return}
+  lgMsg('Вход...');
+  try{
+    const j=await api({url,login,pass},'login');
+    sess={url,login:j.login,pass,role:j.role};
+    save(SESS_KEY,sess);try{localStorage.setItem('writeoff_url',url)}catch(e){}
+    startApp();
+  }catch(e){lgMsg(e.code?'Ошибка: '+e.message:'Нет связи. Проверьте интернет и ссылку.')}
+};
+$('#lgPass').onkeydown=e=>{if(e.key==='Enter')$('#lgGo').click()};
+function logout(msg){
+  try{localStorage.removeItem(SESS_KEY)}catch(e){}
+  sess=null;items=[];allItems=[];sel.clear();
+  document.body.classList.remove('admin');
+  document.querySelector('[data-tab=add]').click();
+  initLogin();if(msg)lgMsg(msg);
+}
+$('#logout').onclick=()=>{if(confirm('Выйти? Несинхронизированные изменения останутся на устройстве.'))logout()};
+
+function startApp(){
+  const k=sess.login.replace(/[^a-z0-9._-]/g,'_');
+  DB_KEY='writeoff_db_v2_'+k;ST_KEY='writeoff_settings_v2_'+k;SY_KEY='writeoff_sync_v2_'+k;
+  items=load(DB_KEY,[]);settings=load(ST_KEY,{});sync=load(SY_KEY,{up:[],rm:[]});
+  // перенос данных из старой версии сайта (один раз)
+  const old=localStorage.getItem('writeoff_db_v1');
+  if(old&&!items.length){
+    try{
+      items=JSON.parse(old)||[];save(DB_KEY,items);
+      settings=load('writeoff_settings_v1',{});save(ST_KEY,settings);
+      sync.up=items.map(x=>x.id);sync.rm=[];sysave();
+      localStorage.removeItem('writeoff_db_v1');localStorage.removeItem('writeoff_settings_v1');localStorage.removeItem('writeoff_sync_v1');
+    }catch(e){}
+  }
+  sel.clear();allItems=[];allMode=false;$('#scope').value='mine';
+  document.body.classList.toggle('admin',sess.role==='admin');
+  $('#who').innerHTML='Вы вошли как <b>'+esc(sess.login)+'</b> ('+(sess.role==='admin'?'администратор':'пользователь')+')';
+  $('#loginBox').classList.remove('on');
+  buildForm();buildSettings();updCnt();clearForm(false);
+  syMsg('');
+  // проверка, что пароль не менялся
+  api(sess,'login').then(flush).catch(e=>{if(e.code==='auth')logout('Пароль изменён. Войдите заново.')});
+}
+
+/* ============ ВКЛАДКИ ============ */
+document.querySelectorAll('header button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('header button').forEach(x=>x.classList.toggle('on',x===b));
+  ['add','list','docs','users','data'].forEach(t=>$('#tab-'+t).classList.toggle('hide',t!==b.dataset.tab));
+  if(b.dataset.tab==='list')renderList();
+  if(b.dataset.tab==='docs')$('#selCnt').textContent=sel.size;
+  if(b.dataset.tab==='users')renderUsers();
+  if(b.dataset.tab==='data')showSize();
+});
+
+/* ============ ФОРМА ============ */
+function buildForm(){
+  $('#fields').innerHTML=FIELDS.map(f=>`
+    <label>${f.l}</label>
+    ${f.opts?`<select id="t_${f.k}" style="margin-bottom:6px"><option value="">— выберите из списка —</option>${DEVICE_TYPES.map(t=>`<option>${esc(t)}</option>`).join('')}<option value="__other">Другое (ввести вручную)</option></select>`:''}
+    <div class="row">
+      <input id="f_${f.k}" placeholder="${f.ph||''}" autocomplete="off">
+      ${f.cam?`<button class="cam" type="button" data-cam="${f.k}" title="Сканировать камерой">📷</button>`:''}
+    </div>`).join('');
+  document.querySelectorAll('[data-cam]').forEach(b=>b.onclick=()=>startScan(b.dataset.cam));
+  document.querySelectorAll('select[id^="t_"]').forEach(sl=>{
+    const k=sl.id.slice(2),inp=$('#f_'+k);
+    sl.onchange=()=>{if(sl.value==='__other'){inp.value='';inp.focus()}else inp.value=sl.value};
+    inp.oninput=()=>syncSel(k);
+  });
+}
+function syncSel(k){
+  const sl=$('#t_'+k);if(!sl)return;
+  const v=$('#f_'+k).value.trim();
+  sl.value=DEVICE_TYPES.includes(v)?v:(v?'__other':'');
+}
+function readForm(){const o={};FIELDS.forEach(f=>o[f.k]=$('#f_'+f.k).value.trim());return o}
+function fillForm(o){FIELDS.forEach(f=>{$('#f_'+f.k).value=o?.[f.k]||'';if(f.opts)syncSel(f.k)})}
+function clearForm(keepPlace){
+  const place=$('#f_place').value, cond=$('#f_cond').value, year=$('#f_year').value, nm=$('#f_name').value;
+  fillForm({}); editId=null; $('#formTitle').textContent='Новое устройство';
+  if(keepPlace){$('#f_place').value=place;$('#f_cond').value=cond;$('#f_year').value=year;$('#f_name').value=nm;syncSel('name')}
+  $('#chips').innerHTML='';$('#ocrStatus').textContent='';
+}
+function saveItem(next){
+  const o=readForm();
+  if(!o.asset&&!o.serial&&!o.model){toast('Заполните хотя бы номер, серийный или модель');return false}
+  if(editId){const i=items.findIndex(x=>x.id===editId);items[i]={...o,id:editId}}
+  else{
+    if(o.asset&&items.some(x=>x.asset===o.asset)&&!confirm('Устройство с таким номером уже есть. Добавить ещё раз?'))return false;
+    items.push({...o,id:Date.now().toString(36)});
+  }
+  save(DB_KEY,items);updCnt();toast('Сохранено ✓');queueUp(editId||items[items.length-1].id);
+  clearForm(next);window.scrollTo(0,0);return true;
+}
+$('#save').onclick=()=>saveItem(false);
+$('#saveNext').onclick=()=>saveItem(true);
+$('#clear').onclick=()=>clearForm(false);
+
+/* ============ СКАНИРОВАНИЕ (OCR) ============ */
+let scanField=null, worker=null, srcBmp=null, crop=null, dragStart=null, busy=false;
+const NUMF={asset:1,serial:1};
+function startScan(k){scanField=k;$('#photo').value='';$('#photo').click()}
+$('#photo').onchange=async e=>{
+  const file=e.target.files[0];if(!file)return;
+  try{srcBmp=await createImageBitmap(file)}catch(err){toast('Не удалось открыть фото');return}
+  openCrop();
+};
+function openCrop(){
+  $('#cropModal').classList.add('on');
+  const cv=$('#cropCv');
+  const maxW=Math.min(window.innerWidth-24,720), maxH=window.innerHeight*0.6;
+  const r=Math.min(maxW/srcBmp.width,maxH/srcBmp.height);
+  cv.width=Math.round(srcBmp.width*r);cv.height=Math.round(srcBmp.height*r);cv.dataset.r=r;
+  crop=null;$('#cropSt').textContent='';drawCrop();
+}
+function closeCrop(){$('#cropModal').classList.remove('on');if(srcBmp&&srcBmp.close)srcBmp.close();srcBmp=null;crop=null}
+function drawCrop(){
+  const cv=$('#cropCv'),x=cv.getContext('2d');
+  x.drawImage(srcBmp,0,0,cv.width,cv.height);
+  if(crop){
+    x.fillStyle='rgba(0,0,0,.55)';
+    x.fillRect(0,0,cv.width,crop.y);
+    x.fillRect(0,crop.y+crop.h,cv.width,cv.height-crop.y-crop.h);
+    x.fillRect(0,crop.y,crop.x,crop.h);
+    x.fillRect(crop.x+crop.w,crop.y,cv.width-crop.x-crop.w,crop.h);
+    x.strokeStyle='#4da3ff';x.lineWidth=3;x.strokeRect(crop.x,crop.y,crop.w,crop.h);
+  }
+}
+function cvPos(ev){
+  const cv=$('#cropCv'),b=cv.getBoundingClientRect();
+  return{x:Math.max(0,Math.min(b.width,ev.clientX-b.left))*cv.width/b.width,
+         y:Math.max(0,Math.min(b.height,ev.clientY-b.top))*cv.height/b.height};
+}
+(()=>{
+  const cv=$('#cropCv');
+  cv.onpointerdown=ev=>{ev.preventDefault();cv.setPointerCapture(ev.pointerId);dragStart=cvPos(ev);crop={x:dragStart.x,y:dragStart.y,w:0,h:0};drawCrop()};
+  cv.onpointermove=ev=>{if(!dragStart)return;const p=cvPos(ev);
+    crop={x:Math.min(p.x,dragStart.x),y:Math.min(p.y,dragStart.y),w:Math.abs(p.x-dragStart.x),h:Math.abs(p.y-dragStart.y)};drawCrop()};
+  cv.onpointerup=cv.onpointercancel=()=>{dragStart=null};
+})();
+$('#cropCancel').onclick=closeCrop;
+$('#cropGo').onclick=()=>runOcr(true);
+$('#cropAll').onclick=()=>{crop=null;drawCrop();runOcr(false)};
+
+function otsu(g){
+  const h=new Array(256).fill(0);for(let i=0;i<g.length;i++)h[g[i]]++;
+  const tot=g.length;let sum=0;for(let i=0;i<256;i++)sum+=i*h[i];
+  let sB=0,wB=0,max=0,th=127;
+  for(let i=0;i<256;i++){wB+=h[i];if(!wB)continue;const wF=tot-wB;if(!wF)break;sB+=i*h[i];
+    const mB=sB/wB,mF=(sum-sB)/wF,v=wB*wF*(mB-mF)*(mB-mF);if(v>max){max=v;th=i}}
+  return th;
+}
+function preprocess(cv,bw){
+  const x=cv.getContext('2d'),id=x.getImageData(0,0,cv.width,cv.height),d=id.data,n=cv.width*cv.height;
+  const g=new Uint8Array(n),hist=new Uint32Array(256);
+  for(let i=0;i<n;i++){const v=(d[i*4]*.299+d[i*4+1]*.587+d[i*4+2]*.114)|0;g[i]=v;hist[v]++}
+  let lo=0,hi=255,c=0;
+  for(lo=0;lo<255&&(c+=hist[lo])<n*.01;lo++);
+  c=0;for(hi=255;hi>0&&(c+=hist[hi])<n*.01;hi--);
+  if(hi-lo<20){lo=0;hi=255}
+  let sum=0;
+  for(let i=0;i<n;i++){let v=(g[i]-lo)*255/(hi-lo);v=v<0?0:v>255?255:v;g[i]=v;sum+=v}
+  const invert=sum/n<110;
+  if(bw){const th=otsu(g);for(let i=0;i<n;i++)g[i]=g[i]>th?255:0}
+  for(let i=0;i<n;i++){const v=invert?255-g[i]:g[i];d[i*4]=d[i*4+1]=d[i*4+2]=v;d[i*4+3]=255}
+  x.putImageData(id,0,0);
+}
+async function runOcr(useCrop){
+  if(busy||!srcBmp)return;busy=true;
+  const st=$('#cropSt');
+  try{
+    const r=+$('#cropCv').dataset.r;
+    let sx=0,sy=0,sw=srcBmp.width,sh=srcBmp.height;
+    if(useCrop&&crop&&crop.w>15&&crop.h>10){sx=crop.x/r;sy=crop.y/r;sw=crop.w/r;sh=crop.h/r}
+    else if(useCrop){toast('Сначала обведите рамкой нужную строку');busy=false;return}
+    const sc=Math.min(3,1800/sw);
+    const cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(sw*sc));cv.height=Math.max(1,Math.round(sh*sc));
+    cv.getContext('2d').drawImage(srcBmp,sx,sy,sw,sh,0,0,cv.width,cv.height);
+    preprocess(cv,$('#bw').checked);
+    if(!worker){
+      st.textContent='Загрузка распознавания (первый раз ~10 сек)...';
+      worker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')$('#cropSt').textContent='Распознаю: '+Math.round(m.progress*100)+'%'}});
+    }
+    const num=NUMF[scanField];
+    await worker.setParameters({
+      tessedit_char_whitelist:num?'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/._':'',
+      tessedit_pageseg_mode:(cv.width/cv.height>4)?'7':'6',
+      preserve_interword_spaces:'1'
+    });
+    st.textContent='Распознаю...';
+    const {data}=await worker.recognize(cv);
+    let lines=(data.lines||[]).map(l=>(l.words||[]).filter(w=>w.confidence>50).map(w=>w.text).join(' ').trim()).filter(Boolean);
+    if(!lines.length)lines=(data.text||'').split(/\n+/);
+    cv.width=cv.height=1;
+    closeCrop();
+    showCandidates(lines.join('\n'));
+  }catch(err){st.textContent='Ошибка: '+err.message+'. Нужен интернет при первом запуске.'}
+  busy=false;
+}
+function showCandidates(text){
+  const f=FIELDS.find(x=>x.k===scanField), num=NUMF[scanField];
+  const lines=text.split(/\n+/).map(s=>s.trim()).filter(s=>s.length>1);
+  let tokens=[];
+  lines.forEach(l=>{
+    const m=l.match(/[:#№]\s*([A-Za-z0-9\-\/._ ]{3,})$/);
+    if(m)tokens.push(m[1].trim());
+    tokens.push(l);
+    l.split(/\s+/).forEach(w=>{if(w.length>=4)tokens.push(w.replace(/^[^\w]+|[^\w]+$/g,''))});
+  });
+  tokens=[...new Set(tokens.filter(t=>t.length>=3))];
+  if(num){
+    const withDigit=tokens.filter(t=>/\d/.test(t));
+    if(withDigit.length)tokens=withDigit;
+    const score=t=>(/^[A-Za-z0-9\-\/._]+$/.test(t)?2:0)+(t.length>=5&&t.length<=24?1:0)-(/\s/.test(t)?1:0);
+    tokens.sort((a,b)=>score(b)-score(a));
+  }
+  tokens=tokens.slice(0,12);
+  const st=$('#ocrStatus');
+  if(!tokens.length){st.textContent='Текст не найден. Снимите ближе, при хорошем свете, и обведите только нужную строку.';$('#chips').innerHTML='';return}
+  st.textContent='Нажмите на нужный вариант — он вставится в поле «'+f.l+'». Если не то — повторите съёмку.';
+  $('#chips').innerHTML=tokens.map(t=>`<span class="chip">${esc(t)}</span>`).join('');
+  document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{$('#f_'+scanField).value=c.textContent;toast('Вставлено ✓')});
+  const el=$('#f_'+scanField);if(!el.value&&num)el.value=tokens[0];
+  $('#chips').scrollIntoView({block:'center',behavior:'smooth'});
+}
+
+/* ============ СПИСОК ============ */
+function updCnt(){$('#cnt').textContent=items.length}
+const curSrc=()=>allMode?allItems:items;
+async function loadAll(){
+  try{const j=await api(sess,'pull',{scope:'all'});allItems=j.items;renderList()}
+  catch(e){toast('Не удалось загрузить: '+e.message)}
+}
+$('#scope').onchange=()=>{allMode=$('#scope').value==='all';if(allMode){allItems=[];renderList();loadAll()}else renderList()};
+function renderList(){
+  const q=$('#q').value.toLowerCase();
+  const arr=curSrc().filter(x=>!q||Object.values(x).join(' ').toLowerCase().includes(q));
+  $('#items').innerHTML=arr.length?arr.map(x=>`
+    <div class="item">
+      <input type="checkbox" data-sel="${esc(K(x))}" ${sel.has(K(x))?'checked':''}>
+      <div class="t"><b>${esc(x.asset||'—')}</b> · ${esc(x.name)}<br>
+        <span class="small">${esc(x.model)} · S/N ${esc(x.serial)}${allMode?' · 👤 '+esc(x.owner):''}</span></div>
+      ${allMode?`<button class="btn sec" data-delany="${esc(K(x))}">🗑</button>`
+               :`<button class="btn sec" data-edit="${esc(x.id)}">✏️</button><button class="btn sec" data-del="${esc(x.id)}">🗑</button>`}
+    </div>`).join(''):'<p class="small">Пока пусто.</p>';
+  document.querySelectorAll('[data-sel]').forEach(c=>c.onchange=()=>{c.checked?sel.add(c.dataset.sel):sel.delete(c.dataset.sel)});
+  document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{
+    const o=items.find(x=>x.id===b.dataset.edit);fillForm(o);editId=o.id;
+    $('#formTitle').textContent='Редактирование';document.querySelector('[data-tab=add]').click();
+  });
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    if(!confirm('Удалить устройство?'))return;
+    const id=b.dataset.del;
+    items=items.filter(x=>x.id!==id);sel.delete(sess.login+'|'+id);save(DB_KEY,items);updCnt();renderList();queueRm(id);
+  });
+  document.querySelectorAll('[data-delany]').forEach(b=>b.onclick=async()=>{
+    const x=allItems.find(y=>K(y)===b.dataset.delany);if(!x)return;
+    if(!confirm('Удалить устройство пользователя '+x.owner+'?'))return;
+    try{
+      await api(sess,'sync',{removeAny:[{id:x.id,owner:x.owner}]});
+      allItems=allItems.filter(y=>K(y)!==K(x));sel.delete(K(x));
+      if(x.owner===sess.login){items=items.filter(y=>y.id!==x.id);save(DB_KEY,items);updCnt()}
+      renderList();
+    }catch(e){toast('Ошибка: '+e.message)}
+  });
+}
+$('#q').oninput=renderList;
+$('#selAll').onclick=()=>{curSrc().forEach(x=>sel.add(K(x)));renderList()};
+$('#selNone').onclick=()=>{sel.clear();renderList()};
+
+/* ============ ПОЛЬЗОВАТЕЛИ (админ) ============ */
+async function renderUsers(){
+  if(!sess||sess.role!=='admin')return;
+  const box=$('#usersList');box.innerHTML='<p class="small">Загрузка...</p>';
+  try{
+    const j=await api(sess,'users.list');
+    box.innerHTML=
+      `<div class="item"><div class="t"><b>${esc(sess.login)}</b> (администратор)<br><span class="small">устройств: ${j.adminCount}</span></div></div>`+
+      (j.users.length?j.users.map(u=>`
+      <div class="item"><div class="t"><b>${esc(u.login)}</b><br><span class="small">устройств: ${u.count} · создан ${esc(u.created)}</span></div>
+        <button class="btn sec" data-pw="${esc(u.login)}" title="Сменить пароль">🔑</button>
+        <button class="btn sec" data-ud="${esc(u.login)}" title="Удалить">🗑</button></div>`).join(''):'<p class="small">Других пользователей пока нет.</p>');
+    box.querySelectorAll('[data-pw]').forEach(b=>b.onclick=async()=>{
+      const np=prompt('Новый пароль для '+b.dataset.pw+' (минимум 6 символов):');if(!np)return;
+      try{await api(sess,'users.pass',{target:b.dataset.pw,newPass:np});toast('Пароль изменён ✓')}catch(e){toast(e.message)}
+    });
+    box.querySelectorAll('[data-ud]').forEach(b=>b.onclick=async()=>{
+      if(!confirm('Удалить пользователя '+b.dataset.ud+'? Его устройства в таблице останутся (их можно удалить в «Список → Все пользователи»).'))return;
+      try{await api(sess,'users.del',{target:b.dataset.ud});renderUsers()}catch(e){toast(e.message)}
+    });
+  }catch(e){box.innerHTML='<p class="small">Не удалось загрузить: '+esc(e.message)+'</p>'}
+}
+$('#nuAdd').onclick=async()=>{
+  const l=$('#nuLogin').value.trim(),p=$('#nuPass').value;
+  if(!l||!p){toast('Введите логин и пароль');return}
+  try{await api(sess,'users.add',{newLogin:l,newPass:p});$('#nuLogin').value='';$('#nuPass').value='';toast('Пользователь создан ✓');renderUsers()}
+  catch(e){toast(e.message)}
+};
+
+/* ============ СИНХРОНИЗАЦИЯ ============ */
+const sysave=()=>{if(SY_KEY)save(SY_KEY,sync)};
+const syMsg=t=>{$('#syState').textContent=t};
+function queueUp(id){if(!sess)return;sync.rm=sync.rm.filter(x=>x!==id);if(!sync.up.includes(id))sync.up.push(id);sysave();flush()}
+function queueRm(id){if(!sess)return;sync.up=sync.up.filter(x=>x!==id);if(!sync.rm.includes(id))sync.rm.push(id);sysave();flush()}
+let flushing=false;
+async function flush(){
+  if(!sess||flushing||(!sync.up.length&&!sync.rm.length))return;
+  flushing=true;
+  try{
+    const sent=[...sync.up], rm=[...sync.rm];
+    const up=sent.map(id=>items.find(x=>x.id===id)).filter(Boolean);
+    await api(sess,'sync',{upsert:up,remove:rm});
+    sync.up=sync.up.filter(id=>!sent.includes(id));sync.rm=sync.rm.filter(id=>!rm.includes(id));sysave();
+    syMsg('Синхронизировано ✓ '+new Date().toLocaleTimeString());
+  }catch(e){
+    if(e.code==='auth')logout('Пароль изменён. Войдите заново.');
+    else syMsg('Не отправлено ('+e.message+'). Повторится автоматически, когда появится интернет.');
+  }
+  flushing=false;
+}
+$('#syPush').onclick=()=>{sync.up=items.map(x=>x.id);sync.rm=[];sysave();syMsg('Отправляю...');flush()};
+$('#syPull').onclick=async()=>{
+  try{
+    syMsg('Загружаю...');
+    const j=await api(sess,'pull',{scope:'mine'});
+    const map=new Map(items.map(x=>[x.id,x]));
+    j.items.forEach(x=>{const {owner,...rest}=x;map.set(String(x.id),rest)});
+    items=[...map.values()];save(DB_KEY,items);updCnt();showSize();
+    syMsg('Загружено ✓ Всего устройств: '+items.length);
+  }catch(e){syMsg('Ошибка загрузки: '+e.message)}
+};
+window.addEventListener('online',flush);
+
+/* ============ ДАННЫЕ ============ */
+function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000)}
+function showSize(){const n=new Blob([JSON.stringify(items)]).size;$('#size').textContent=`Устройств: ${items.length}. Размер базы: ${(n/1024).toFixed(1)} КБ.`}
+$('#exp').onclick=()=>dl(new Blob([JSON.stringify({items,settings})],{type:'application/json'}),'база-списание-'+new Date().toISOString().slice(0,10)+'.json');
+$('#impBtn').onclick=()=>$('#imp').click();
+$('#imp').onchange=async e=>{
+  try{
+    const d=JSON.parse(await e.target.files[0].text());
+    const inc=Array.isArray(d)?d:d.items;
+    const have=new Set(items.map(x=>x.id));
+    inc.forEach(x=>{if(!have.has(x.id)){items.push(x);sync.up.push(x.id)}});
+    if(d.settings)settings={...d.settings,...settings};
+    save(DB_KEY,items);save(ST_KEY,settings);sysave();updCnt();buildSettings();showSize();toast('База загружена ✓');flush();
+  }catch(err){toast('Не удалось прочитать файл')}
+};
+$('#csv').onclick=()=>{
+  const headers=FIELDS.map(f=>f.l);
+  const data=[headers,...items.map(x=>FIELDS.map(f=>x[f.k]??''))];
+  if(window.XLSX){
+    const ws=XLSX.utils.aoa_to_sheet(data);
+    ws['!cols']=FIELDS.map(f=>({wch:Math.min(34,Math.max(16,f.l.length+3))}));
+    ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:Math.max(0,data.length-1),c:headers.length-1}})};
+    ws['!freeze']={xSplit:0,ySplit:1};
+    headers.forEach((h,c)=>{const cell=ws[XLSX.utils.encode_cell({r:0,c})];if(cell)cell.s={font:{bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1A56DB'}},alignment:{vertical:'center',wrapText:true}};});
+    items.forEach((x,r)=>['asset','serial'].forEach(k=>{
+      const idx=FIELDS.findIndex(f=>f.k===k),cell=ws[XLSX.utils.encode_cell({r:r+1,c:idx})];
+      if(cell){cell.t='s';cell.v=String(cell.v??'');}
+    }));
+    items.forEach((x,r)=>{const idx=FIELDS.findIndex(f=>f.k==='price'),cell=ws[XLSX.utils.encode_cell({r:r+1,c:idx})];if(cell&&String(cell.v??'').trim()!==''&&Number.isFinite(Number(String(cell.v).replace(',','.')))){cell.t='n';cell.v=Number(String(cell.v).replace(',','.'));cell.z='#,##0.00';}});
+    ws['!rows']=[{hpt:30},...items.map(()=>({hpt:22}))];
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Устройства');
+    XLSX.writeFile(wb,'Инвентаризация-'+new Date().toISOString().slice(0,10)+'.xlsx',{cellStyles:true});
+  }else{
+    const rows=items.map(x=>FIELDS.map(f=>'"'+String(x[f.k]||'').replace(/"/g,'""')+'"').join(';'));
+    dl(new Blob(['\ufeff'+[headers.map(h=>'"'+h+'"').join(';'),...rows].join('\r\n')],{type:'text/csv;charset=utf-8'}),'устройства.csv');
+  }
+};
+$('#wipe').onclick=()=>{
+  if(confirm('Очистить список на ЭТОМ устройстве? В Google Таблице данные останутся, их можно вернуть кнопкой «Загрузить из таблицы».')){
+    items=[];sel.clear();sync={up:[],rm:[]};save(DB_KEY,items);sysave();updCnt();showSize();
+  }
+};
+
+/* ============ ДОКУМЕНТЫ (WORD) ============ */
+function buildSettings(){
+  $('#settings').innerHTML=SETTINGS.map(s=>{
+    let control;
+    if(s.area) control=`<textarea rows="3" id="s_${s.k}"></textarea>`;
+    else if(s.type==='expert') control=`<select id="s_${s.k}">${EXPERTS.map(v=>`<option value="${v}">${v}</option>`).join('')}</select>`;
+    else if(s.type==='cost') control=`<select id="s_${s.k}"><option value="">— выберите центр затрат —</option>${COST_CENTERS.map(v=>`<option value="${v}">${v}</option>`).join('')}</select>`;
+    else control=`<input id="s_${s.k}" ${s.k==='date'?'placeholder="ДД.ММ.ГГГГ"':''}>`;
+    return `<label>${s.l}</label>${control}`;
+  }).join('');
+  const defaults={date:todayText(),location:'Birlik',expert:EXPERTS[0],members:EXPERTS.join('\n')};
+  SETTINGS.forEach(s=>{
+    const el=$('#s_'+s.k);
+    el.value=settings[s.k]!==undefined?settings[s.k]:(defaults[s.k]||'');
+    el.onchange=el.oninput=()=>{settings[s.k]=el.value;save(ST_KEY,settings)};
+    if(settings[s.k]===undefined){settings[s.k]=el.value;save(ST_KEY,settings)}
+  });
+}
+function selected(){
+  const m=new Map();[...items,...allItems].forEach(x=>m.set(K(x),x));
+  const a=[...m.entries()].filter(([k])=>sel.has(k)).map(([,x])=>x);
+  if(!a.length)toast('Отметьте устройства во вкладке «Список»');return a;
+}
+const D=()=>window.docx;
+const P=(text,o={})=>new (D().Paragraph)({alignment:o.al,spacing:{after:o.after??120},children:[new (D().TextRun)({text:text||'',bold:o.b,size:o.sz||24,font:'Times New Roman'})]});
+function cell(t,w,b){return new (D().TableCell)({width:{size:w,type:D().WidthType.PERCENTAGE},children:[P(t,{sz:20,b,after:0})]})}
+function table(cols,rows){
+  const W=cols.map(c=>c[1]);
+  return new (D().Table)({width:{size:100,type:D().WidthType.PERCENTAGE},rows:[
+    new (D().TableRow)({tableHeader:true,children:cols.map(c=>cell(c[0],c[1],true))}),
+    ...rows.map(r=>new (D().TableRow)({children:r.map((v,i)=>cell(v,W[i]))}))
+  ]});
+}
+function signLines(){
+  const out=[P('',{after:240})];
+  const add=(role,name)=>out.push(P((role||'')+' ______________ / '+(name||'')+' /',{after:200}));
+  const split=s=>{const m=(s||'').split(',');return [m[0]?.trim(),m.slice(1).join(',').trim()]};
+  return {out,add,split};
+}
+async function makeDoc(kind){
+  const list=selected();if(!list.length)return;
+  if(!D()){toast('Библиотека Word не загрузилась — нужен интернет');return}
+  const s=settings, A=D().AlignmentType;
+  const head=[
+    P(s.org,{al:A.CENTER,b:true}),
+    P(kind==='act'?'АКТ № '+(s.docNo||'___')+' о списании основных средств':'ЭКСПЕРТНОЕ ЗАКЛЮЧЕНИЕ № '+(s.docNo||'___')+' о техническом состоянии оборудования',{al:A.CENTER,b:true,sz:28}),
+    P((s.city||'')+(s.city&&s.date?', ':'')+(s.date||todayText()),{al:A.CENTER,after:120}),
+    ...(kind==='act'?[P('Центр затрат: '+(s.costCenter||'________')+'    Местонахождение: '+(s.location||'Birlik'),{after:240})]:[P('Местонахождение: '+(s.location||'Birlik'),{after:240})]),
+  ];
+  let body=[];
+  const rows=list.map((x,i)=>[String(i+1),x.asset,x.name,x.model,x.serial,x.year,x.cond]);
+  const cols=[['№',5],['Инв. номер',15],['Наименование',17],['Модель',17],['Серийный номер',17],['Год',8],['Состояние / причина',21]];
+  const sg=signLines();
+  if(kind==='act'){
+    body=[
+      P('Комиссия в составе:'+(s.basis?' ('+s.basis+')':'')+' Центр затрат: '+(s.costCenter||'________')+'. Местонахождение: '+(s.location||'Birlik')+'.'),
+      P('Председатель: '+(s.chair||'')),
+      ...(s.members||'').split('\n').filter(Boolean).map(m=>P('Член комиссии: '+m)),
+      P('провела осмотр нижеперечисленного оборудования и установила, что оно непригодно для дальнейшего использования и подлежит списанию:',{after:200}),
+      table(cols,rows),
+      P('',{after:120}),
+      P('Всего к списанию: '+list.length+' ед.',{b:true}),
+    ];
+    sg.add('Председатель комиссии',sg.split(s.chair)[1]);
+    (s.members||'').split('\n').filter(Boolean).forEach(m=>{const [r,n]=sg.split(m);sg.add(r,n)});
+  }else{
+    body=[
+      P('Эксперт: '+(s.expert||'')+(s.basis?' ('+s.basis+')':'')),
+      P('Мною проведена техническая экспертиза следующего оборудования:',{after:200}),
+      table(cols,rows),
+      P('',{after:120}),
+      P('Заключение: по результатам осмотра установлено, что указанное оборудование (всего '+list.length+' ед.) имеет неисправности / физический и моральный износ, восстановление нецелесообразно, оборудование подлежит списанию.'),
+    ];
+    const [r,n]=sg.split(s.expert);sg.add(r||'Эксперт',n);
+  }
+  const doc=new (D().Document)({sections:[{properties:{page:{size:{orientation:D().PageOrientation.LANDSCAPE},margin:{top:800,bottom:800,left:900,right:900}}},children:[...head,...body,...sg.out]}]});
+  dl(await D().Packer.toBlob(doc),(kind==='act'?'Акт':'Экспертное-заключение')+'-'+(s.docNo||'без-номера')+'.docx');
+  toast('Документ создан ✓');
+}
+/* ============ ЗАПОЛНЕНИЕ ОРИГИНАЛЬНЫХ EXCEL-ШАБЛОНОВ ============
+   Положите act.xlsx и zakluchenie.xlsx рядом с index.html в корне GitHub Pages.
+*/
+const TEMPLATE_ACT='act.xlsx';
+const TEMPLATE_EXP='zakluchenie.xlsx';
+function dateForExcel(value){
+  if(!value) return new Date();
+  const m=String(value).match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+  if(m) return new Date(Number(m[3]),Number(m[2])-1,Number(m[1]));
+  const d=new Date(value); return Number.isNaN(d.getTime())?new Date():d;
+}
+function dateRu(value){return dateForExcel(value).toLocaleDateString('ru-RU');}
+async function openTemplateZip(file){
+  if(!window.JSZip) throw new Error('Не загрузилась библиотека для сохранения Excel. Проверьте интернет-соединение.');
+  const response=await fetch(encodeURI(file));
+  if(!response.ok) throw new Error('Не найден файл «'+file+'». Загрузите его в ту же папку GitHub Pages, где находится index.html.');
+  // Меняем лишь XML первой страницы внутри архива. Все остальные части шаблона,
+  // включая стили, объединения, изображения, внешние ссылки и настройки печати,
+  // остаются нетронутыми. Это предотвращает предупреждение Excel о восстановлении.
+  return await JSZip.loadAsync(await response.arrayBuffer());
+}
+// Приводит значения из браузерной базы/Google Sheets к обычному тексту.
+function excelText(value, seen=new Set()){
+  if(value===undefined||value===null) return '';
+  if(typeof value==='string') return value;
+  if(typeof value==='number'||typeof value==='boolean') return String(value);
+  if(value instanceof Date) return dateRu(value);
+  if(Array.isArray(value)) return value.map(v=>excelText(v,seen)).filter(Boolean).join(', ');
+  if(typeof value==='object'){
+    if(seen.has(value)) return '';
+    seen.add(value);
+    for(const key of ['text','value','displayValue','formattedValue','label','name','result','v']){
+      if(value[key]!==undefined&&value[key]!==null&&value[key]!==value){
+        const text=excelText(value[key],seen);
+        if(text) return text;
+      }
+    }
+    if(Array.isArray(value.richText)) return value.richText.map(bit=>excelText(bit&&bit.text!==undefined?bit.text:bit,seen)).filter(Boolean).join('');
+    return Object.keys(value).filter(k=>!['id','key','type','metadata'].includes(k)).map(k=>excelText(value[k],seen)).filter(Boolean).join(' ');
+  }
+  return String(value);
+}
+function xmlEscape(value){
+  return String(value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+// Обновляет значение одной ячейки, сохраняя все её стилевые атрибуты.
+// Строки записываются как inline strings — не меняем sharedStrings.xml и другие листы.
+function setWorksheetCell(xml, address, value){
+  const safeAddress=address.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const re=new RegExp('<c\\b(?=[^>]*\\br="'+safeAddress+'")[^>]*?(?:\\/>|>[\\s\\S]*?<\\/c>)');
+  const found=xml.match(re);
+  if(!found) throw new Error('В шаблоне не найдена ячейка '+address+'. Проверьте исходный Excel-файл.');
+  const fragment=found[0];
+  const gt=fragment.indexOf('>');
+  let opening=fragment.slice(0,gt).replace(/\/$/,'');
+  opening=opening.replace(/\s+t="[^"]*"/,'');
+  let replacement;
+  if(value===undefined||value===null||value===''){
+    // Сохраняем формат ячейки, но убираем старый текст полностью.
+    replacement=opening+'/>';
+  }else if(typeof value==='number'&&Number.isFinite(value)){
+    replacement=opening+'><v>'+String(value)+'</v></c>';
+  }else{
+    replacement=opening+' t="inlineStr"><is><t xml:space="preserve">'+xmlEscape(excelText(value))+'</t></is></c>';
+  }
+  return xml.replace(fragment,replacement);
+}
+async function writeTemplateCells(zip, cells){
+  const path='xl/worksheets/sheet1.xml';
+  const entry=zip.file(path);
+  if(!entry) throw new Error('В Excel-шаблоне не найден основной лист.');
+  let xml=await entry.async('string');
+  for(const [address,value] of Object.entries(cells)) xml=setWorksheetCell(xml,address,value);
+  zip.file(path,xml);
+}
+function fileSafe(s){return String(s||'без-номера').replace(/[\\/:*?"<>|\s]+/g,'-').slice(0,80)}
+async function makeExcelTemplate(kind){
+  try {
+    const list=selected(); if(!list.length)return;
+    if(kind==='exp'&&list.length!==1){toast('Для экспертного заключения выберите ровно одно устройство.');return;}
+    if(kind==='act'&&list.length>3){toast('В шаблоне акта предусмотрено 3 строки. Выберите не более 3 устройств.');return;}
+    const s=settings||{}; const zip=await openTemplateZip(kind==='act'?TEMPLATE_ACT:TEMPLATE_EXP);
+    const date=dateForExcel(s.date||todayText());
+    const cells={};
+    const put=(address,value)=>{cells[address]=value===undefined||value===null?'':value;};
+    if(kind==='act'){
+      // Дата и центр затрат находятся под своими подписями, отдельно от заголовков.
+      put('H8',dateRu(date));
+      put('J8',s.costCenter||'');
+      list.forEach((x,i)=>{
+        const r=23+i;
+        put('B'+r,[excelText(x.name),excelText(x.model)].filter(Boolean).join(' — '));
+        put('E'+r,s.location||'Birlik');
+        put('F'+r,excelText(x.serial));
+        put('G'+r,excelText(x.asset));
+        put('H'+r,excelText(x.year));
+        put('I'+r,excelText(x.year));
+        const priceText=excelText(x.price);
+        if(priceText){const n=Number(priceText.replace(/\s/g,'').replace(',','.'));if(Number.isFinite(n))put('J'+r,n);}
+      });
+      const reasons=list.map(x=>excelText(x.cond)).filter(Boolean).join('; ');
+      put('E27',reasons); put('E28',reasons); put('E29','Оборудование подлежит списанию.');
+      // По просьбе: имя председателя (Vijay Norbert) и Internal Auditor пустые.
+      // Выбранный эксперт пишется только напротив IT Specialist.
+      put('G31',''); put('K31','Camp Manager');
+      put('G33','');
+      put('G35',s.expert||EXPERTS[0]);
+      // Нижняя строка с Ulyana Serikbayeva и Lead Commercial Specialist должна быть пустой.
+      put('G37',''); put('K37','');
+      // Поле «Number of document and date» оставляем пустым, включая область значения.
+      put('D42',''); put('E42','');
+    } else {
+      const x=list[0];
+      put('B10',[excelText(x.name),excelText(x.model)].filter(Boolean).join(' — '));
+      put('E10',excelText(x.maker));
+      put('F10',excelText(x.serial));
+      put('G10',excelText(x.year));
+      put('J10',s.location||'Birlik');
+      put('L10',excelText(x.asset));
+      const condition=excelText(x.cond)||'Техническое состояние требует оценки специалистом.';
+      put('B17',condition);
+      put('B23',condition);
+      put('B29','Затраты на восстановление составляют 60-70% от стоимости оборудования.');
+      put('B35','Ремонт экономически нецелесообразен. Рекомендуется списание.');
+      // Только один выбранный эксперт — первая строка. Вторая и третья строки пустые.
+      put('D39',s.expert||EXPERTS[0]); put('L39',dateRu(date));
+      put('D41',''); put('L41','');
+      put('D43',''); put('L43','');
+    }
+    await writeTemplateCells(zip,cells);
+    const buffer=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+    const url=URL.createObjectURL(buffer), a=document.createElement('a');
+    a.href=url; a.download=(kind==='act'?'Акт-списания-':'Заключение-экспертов-')+fileSafe(s.docNo||date.toISOString().slice(0,10))+'.xlsx';
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+    toast('Excel-документ создан по исходному шаблону ✓');
+  } catch(e){console.error(e);toast(e.message||'Не удалось сформировать Excel-файл.');}
+}
+$('#mkAct').onclick=()=>makeExcelTemplate('act');
+$('#mkExp').onclick=()=>makeExcelTemplate('exp');
+
+/* ============ СТАРТ ============ */
+(function boot(){
+  const s=load(SESS_KEY,null);
+  if(s&&s.url&&s.login&&s.pass){sess=s;startApp()}else initLogin();
+})();
+</script>
+</body>
+</html>
