@@ -12,7 +12,7 @@
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:40px}
   header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--bd);display:flex;gap:6px;padding:8px;overflow-x:auto}
-  header button{flex:1;min-width:90px;padding:10px;border:0;border-radius:8px;background:transparent;color:var(--tx);font-size:15px;cursor:pointer}
+  header button{flex:1;min-width:90px;padding:10px;border:0;border-radius:8px;background:transparent;color:var(--tx);font-size:15px;cursor:pointer;white-space:nowrap}
   header button.on{background:var(--ac);color:#fff}
   main{max-width:720px;margin:0 auto;padding:12px}
   .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
@@ -30,12 +30,15 @@
   .status{font-size:13px;color:var(--mut);margin-top:6px}
   .item{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--bd)}
   .item:first-child{border-top:0}
-  .item input[type=checkbox]{width:22px;height:22px;margin-top:2px}
-  .item .t{flex:1;font-size:14px}
+  .item input[type=checkbox]{width:22px;height:22px;margin-top:2px;flex:0 0 22px}
+  .item .t{flex:1;font-size:14px;word-break:break-word}
   .item .t b{font-size:15px}
+  .item button{padding:8px 10px}
   .small{font-size:13px;color:var(--mut)}
   .hide{display:none}
-  .toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:9;opacity:0;transition:.3s;pointer-events:none}
+  .adm{display:none}
+  body.admin .adm{display:block}
+  .toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:40;opacity:0;transition:.3s;pointer-events:none;max-width:90%;text-align:center}
   .toast.on{opacity:1}
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:20;display:none;flex-direction:column;align-items:center;padding:10px;overflow:auto;color:#fff}
   .modal.on{display:flex}
@@ -43,6 +46,8 @@
   .modal .btns{justify-content:center}
   .modal label.chk{display:flex;gap:8px;align-items:center;color:#ddd;font-size:14px;margin:10px 0 0}
   .modal label.chk input{width:20px;height:20px}
+  #loginBox{z-index:30;background:var(--bg);justify-content:center;color:var(--tx)}
+  #loginBox .card{width:100%;max-width:420px}
 </style>
 </head>
 <body>
@@ -50,6 +55,7 @@
   <button data-tab="add" class="on">➕ Добавить</button>
   <button data-tab="list">📋 Список (<span id="cnt">0</span>)</button>
   <button data-tab="docs">📄 Документы</button>
+  <button data-tab="users" class="adm">👥 Пользователи</button>
   <button data-tab="data">💾 Данные</button>
 </header>
 <main>
@@ -72,6 +78,10 @@
 <!-- СПИСОК -->
 <section id="tab-list" class="hide">
   <div class="card">
+    <select id="scope" class="adm" style="margin-bottom:10px">
+      <option value="mine">Мои устройства</option>
+      <option value="all">Все пользователи</option>
+    </select>
     <input id="q" placeholder="Поиск по номеру, модели, серийному...">
     <div class="btns">
       <button class="btn sec" id="selAll">Выбрать все</button>
@@ -94,24 +104,37 @@
   </div>
 </section>
 
+<!-- ПОЛЬЗОВАТЕЛИ (только админ) -->
+<section id="tab-users" class="hide">
+  <div class="card">
+    <h2>Новый пользователь</h2>
+    <label>Логин (латиница, цифры, . _ -)</label>
+    <input id="nuLogin" autocapitalize="none" autocomplete="off">
+    <label>Пароль (минимум 6 символов)</label>
+    <input id="nuPass" autocomplete="off">
+    <div class="btns"><button class="btn" id="nuAdd">Создать</button></div>
+  </div>
+  <div class="card">
+    <h2>Пользователи</h2>
+    <div id="usersList"><p class="small">Загрузка...</p></div>
+  </div>
+</section>
+
 <!-- ДАННЫЕ -->
 <section id="tab-data" class="hide">
   <div class="card">
-    <h2>☁️ Google Таблица (автосинхронизация)</h2>
-    <label>Ссылка веб-приложения (заканчивается на /exec)</label>
-    <input id="syUrl" placeholder="https://script.google.com/macros/s/.../exec">
-    <label>Пароль (тот же, что в скрипте)</label>
-    <input id="syTok" type="password" autocomplete="off">
+    <h2>☁️ Аккаунт и синхронизация</h2>
+    <p id="who" style="margin:0 0 6px"></p>
+    <p class="small" id="syState"></p>
     <div class="btns">
-      <button class="btn" id="syTest">Проверить</button>
       <button class="btn sec" id="syPush">Отправить всё в таблицу</button>
       <button class="btn sec" id="syPull">Загрузить из таблицы</button>
+      <button class="btn sec" id="logout">Выйти</button>
     </div>
-    <p class="small" id="syState"></p>
   </div>
   <div class="card">
-    <h2>Сохранение базы</h2>
-    <p class="small">База хранится в памяти браузера этого телефона/компьютера. Чтобы не потерять — скачайте файл и загрузите на Google Drive. Фото не сохраняются, только текст, поэтому файл очень маленький.</p>
+    <h2>Резервная копия</h2>
+    <p class="small">Изменения сами уходят в Google Таблицу. Файл можно скачать как дополнительную копию. Фото не сохраняются, только текст.</p>
     <div class="btns">
       <button class="btn" id="exp">⬇️ Скачать базу (.json)</button>
       <button class="btn sec" id="impBtn">⬆️ Загрузить базу</button>
@@ -119,14 +142,32 @@
       <input type="file" id="imp" accept=".json,application/json" class="hide">
     </div>
     <p class="small" id="size"></p>
-    <div class="btns"><button class="btn del" id="wipe">Удалить всё</button></div>
+    <div class="btns"><button class="btn del" id="wipe">Очистить на этом устройстве</button></div>
   </div>
 </section>
 
 </main>
-<div class="toast" id="toast"></div>
+
+<!-- ВХОД -->
+<div class="modal on" id="loginBox">
+  <div class="card">
+    <h2>Вход</h2>
+    <div id="lgUrlRow">
+      <label>Ссылка веб-приложения (заканчивается на /exec)</label>
+      <input id="lgUrl" placeholder="https://script.google.com/macros/s/.../exec" autocapitalize="none">
+    </div>
+    <label>Логин</label>
+    <input id="lgLogin" autocapitalize="none" autocomplete="username">
+    <label>Пароль</label>
+    <input id="lgPass" type="password" autocomplete="current-password">
+    <p class="small" id="lgMsg" style="min-height:18px"></p>
+    <div class="btns"><button class="btn" id="lgGo" style="width:100%">Войти</button></div>
+  </div>
+</div>
+
+<!-- ОБРЕЗКА ФОТО -->
 <div class="modal" id="cropModal">
-  <p id="cropHint" style="margin:6px 0;text-align:center;font-size:15px">Обведите пальцем только нужную строку (номер, серийник)</p>
+  <p style="margin:6px 0;text-align:center;font-size:15px">Обведите пальцем только нужную строку (номер, серийник)</p>
   <canvas id="cropCv"></canvas>
   <label class="chk"><input type="checkbox" id="bw"> Чёрно-белый режим (если не читает)</label>
   <p id="cropSt" style="margin:6px 0;font-size:14px;color:#9cf;text-align:center"></p>
@@ -136,15 +177,19 @@
     <button class="btn sec" id="cropCancel">Отмена</button>
   </div>
 </div>
+<div class="toast" id="toast"></div>
 <input type="file" id="photo" accept="image/*" capture="environment" class="hide">
 
 <script>
-/* ============ НАСТРОЙКИ ПОЛЕЙ (можно менять) ============ */
+/* ============ НАСТРОЙКИ ============ */
+// Можно вписать сюда ссылку /exec, тогда её не придётся вводить на каждом устройстве:
+const SCRIPT_URL='';
+
 const FIELDS = [
-  {k:'asset',  l:'Инвентарный (asset) номер', cam:true, pat:'asset'},
+  {k:'asset',  l:'Инвентарный (asset) номер', cam:true},
   {k:'name',   l:'Наименование устройства', ph:'Ноутбук, монитор, принтер...'},
   {k:'model',  l:'Модель', cam:true},
-  {k:'serial', l:'Серийный номер', cam:true, pat:'serial'},
+  {k:'serial', l:'Серийный номер', cam:true},
   {k:'maker',  l:'Производитель', cam:true},
   {k:'year',   l:'Год выпуска / ввода'},
   {k:'place',  l:'Местонахождение'},
@@ -162,23 +207,90 @@ const SETTINGS = [
   {k:'basis',  l:'Основание (приказ №, дата)'}
 ];
 
-/* ============ ХРАНИЛИЩЕ ============ */
-const DB_KEY='writeoff_db_v1', ST_KEY='writeoff_settings_v1';
+/* ============ ХРАНИЛИЩЕ (отдельное для каждого пользователя) ============ */
+const SESS_KEY='writeoff_session_v2';
+let DB_KEY='',ST_KEY='',SY_KEY='';
 const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
 const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast('Не удалось сохранить в браузере!')}};
-let items=load(DB_KEY,[]), settings=load(ST_KEY,{}), editId=null;
+let items=[], settings={}, editId=null, sess=null, allItems=[], allMode=false, sync={up:[],rm:[]};
 const sel=new Set();
+const K=x=>(x.owner||(sess&&sess.login)||'')+'|'+x.id;
 
 const $=s=>document.querySelector(s);
-function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),2200)}
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),2600)}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ============ СЕРВЕР ============ */
+const ERR={auth:'неверный логин или пароль',locked:'слишком много попыток, подождите 10 минут'};
+async function api(s,action,body={}){
+  const r=await fetch(s.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify({action,login:s.login,pass:s.pass,...body})});
+  const j=await r.json();
+  if(j.error){const e=new Error(ERR[j.error]||j.error);e.code=j.error;throw e}
+  return j;
+}
+
+/* ============ ВХОД / ВЫХОД ============ */
+const lgMsg=t=>{$('#lgMsg').textContent=t};
+function initLogin(){
+  const saved=localStorage.getItem('writeoff_url')||'';
+  $('#lgUrl').value=SCRIPT_URL||saved;
+  $('#lgUrlRow').classList.toggle('hide',!!SCRIPT_URL);
+  $('#lgPass').value='';lgMsg('');
+  $('#loginBox').classList.add('on');
+}
+$('#lgGo').onclick=async()=>{
+  const url=(SCRIPT_URL||$('#lgUrl').value).trim(), login=$('#lgLogin').value.trim().toLowerCase(), pass=$('#lgPass').value;
+  if(!url||!login||!pass){lgMsg('Заполните все поля');return}
+  lgMsg('Вход...');
+  try{
+    const j=await api({url,login,pass},'login');
+    sess={url,login:j.login,pass,role:j.role};
+    save(SESS_KEY,sess);try{localStorage.setItem('writeoff_url',url)}catch(e){}
+    startApp();
+  }catch(e){lgMsg(e.code?'Ошибка: '+e.message:'Нет связи. Проверьте интернет и ссылку.')}
+};
+$('#lgPass').onkeydown=e=>{if(e.key==='Enter')$('#lgGo').click()};
+function logout(msg){
+  try{localStorage.removeItem(SESS_KEY)}catch(e){}
+  sess=null;items=[];allItems=[];sel.clear();
+  document.body.classList.remove('admin');
+  document.querySelector('[data-tab=add]').click();
+  initLogin();if(msg)lgMsg(msg);
+}
+$('#logout').onclick=()=>{if(confirm('Выйти? Несинхронизированные изменения останутся на устройстве.'))logout()};
+
+function startApp(){
+  const k=sess.login.replace(/[^a-z0-9._-]/g,'_');
+  DB_KEY='writeoff_db_v2_'+k;ST_KEY='writeoff_settings_v2_'+k;SY_KEY='writeoff_sync_v2_'+k;
+  items=load(DB_KEY,[]);settings=load(ST_KEY,{});sync=load(SY_KEY,{up:[],rm:[]});
+  // перенос данных из старой версии сайта (один раз)
+  const old=localStorage.getItem('writeoff_db_v1');
+  if(old&&!items.length){
+    try{
+      items=JSON.parse(old)||[];save(DB_KEY,items);
+      settings=load('writeoff_settings_v1',{});save(ST_KEY,settings);
+      sync.up=items.map(x=>x.id);sync.rm=[];sysave();
+      localStorage.removeItem('writeoff_db_v1');localStorage.removeItem('writeoff_settings_v1');localStorage.removeItem('writeoff_sync_v1');
+    }catch(e){}
+  }
+  sel.clear();allItems=[];allMode=false;$('#scope').value='mine';
+  document.body.classList.toggle('admin',sess.role==='admin');
+  $('#who').innerHTML='Вы вошли как <b>'+esc(sess.login)+'</b> ('+(sess.role==='admin'?'администратор':'пользователь')+')';
+  $('#loginBox').classList.remove('on');
+  buildForm();buildSettings();updCnt();clearForm(false);
+  syMsg('');
+  // проверка, что пароль не менялся
+  api(sess,'login').then(flush).catch(e=>{if(e.code==='auth')logout('Пароль изменён. Войдите заново.')});
+}
 
 /* ============ ВКЛАДКИ ============ */
 document.querySelectorAll('header button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('header button').forEach(x=>x.classList.toggle('on',x===b));
-  ['add','list','docs','data'].forEach(t=>$('#tab-'+t).classList.toggle('hide',t!==b.dataset.tab));
+  ['add','list','docs','users','data'].forEach(t=>$('#tab-'+t).classList.toggle('hide',t!==b.dataset.tab));
   if(b.dataset.tab==='list')renderList();
   if(b.dataset.tab==='docs')$('#selCnt').textContent=sel.size;
+  if(b.dataset.tab==='users')renderUsers();
   if(b.dataset.tab==='data')showSize();
 });
 
@@ -279,7 +391,7 @@ function preprocess(cv,bw){
   if(hi-lo<20){lo=0;hi=255}
   let sum=0;
   for(let i=0;i<n;i++){let v=(g[i]-lo)*255/(hi-lo);v=v<0?0:v>255?255:v;g[i]=v;sum+=v}
-  const invert=sum/n<110; // светлый текст на тёмном фоне
+  const invert=sum/n<110;
   if(bw){const th=otsu(g);for(let i=0;i<n;i++)g[i]=g[i]>th?255:0}
   for(let i=0;i<n;i++){const v=invert?255-g[i]:g[i];d[i*4]=d[i*4+1]=d[i*4+2]=v;d[i*4+3]=255}
   x.putImageData(id,0,0);
@@ -310,7 +422,7 @@ async function runOcr(useCrop){
     const {data}=await worker.recognize(cv);
     let lines=(data.lines||[]).map(l=>(l.words||[]).filter(w=>w.confidence>50).map(w=>w.text).join(' ').trim()).filter(Boolean);
     if(!lines.length)lines=(data.text||'').split(/\n+/);
-    cv.width=cv.height=1; // фото не сохраняем
+    cv.width=cv.height=1;
     closeCrop();
     showCandidates(lines.join('\n'));
   }catch(err){st.textContent='Ошибка: '+err.message+'. Нужен интернет при первом запуске.'}
@@ -345,16 +457,22 @@ function showCandidates(text){
 
 /* ============ СПИСОК ============ */
 function updCnt(){$('#cnt').textContent=items.length}
+const curSrc=()=>allMode?allItems:items;
+async function loadAll(){
+  try{const j=await api(sess,'pull',{scope:'all'});allItems=j.items;renderList()}
+  catch(e){toast('Не удалось загрузить: '+e.message)}
+}
+$('#scope').onchange=()=>{allMode=$('#scope').value==='all';if(allMode){allItems=[];renderList();loadAll()}else renderList()};
 function renderList(){
   const q=$('#q').value.toLowerCase();
-  const arr=items.filter(x=>!q||Object.values(x).join(' ').toLowerCase().includes(q));
+  const arr=curSrc().filter(x=>!q||Object.values(x).join(' ').toLowerCase().includes(q));
   $('#items').innerHTML=arr.length?arr.map(x=>`
     <div class="item">
-      <input type="checkbox" data-sel="${x.id}" ${sel.has(x.id)?'checked':''}>
+      <input type="checkbox" data-sel="${esc(K(x))}" ${sel.has(K(x))?'checked':''}>
       <div class="t"><b>${esc(x.asset||'—')}</b> · ${esc(x.name)}<br>
-        <span class="small">${esc(x.model)} · S/N ${esc(x.serial)}</span></div>
-      <button class="btn sec" data-edit="${x.id}">✏️</button>
-      <button class="btn sec" data-del="${x.id}">🗑</button>
+        <span class="small">${esc(x.model)} · S/N ${esc(x.serial)}${allMode?' · 👤 '+esc(x.owner):''}</span></div>
+      ${allMode?`<button class="btn sec" data-delany="${esc(K(x))}">🗑</button>`
+               :`<button class="btn sec" data-edit="${esc(x.id)}">✏️</button><button class="btn sec" data-del="${esc(x.id)}">🗑</button>`}
     </div>`).join(''):'<p class="small">Пока пусто.</p>';
   document.querySelectorAll('[data-sel]').forEach(c=>c.onchange=()=>{c.checked?sel.add(c.dataset.sel):sel.delete(c.dataset.sel)});
   document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{
@@ -363,26 +481,100 @@ function renderList(){
   });
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
     if(!confirm('Удалить устройство?'))return;
-    items=items.filter(x=>x.id!==b.dataset.del);sel.delete(b.dataset.del);save(DB_KEY,items);updCnt();renderList();queueRm(b.dataset.del);
+    const id=b.dataset.del;
+    items=items.filter(x=>x.id!==id);sel.delete(sess.login+'|'+id);save(DB_KEY,items);updCnt();renderList();queueRm(id);
+  });
+  document.querySelectorAll('[data-delany]').forEach(b=>b.onclick=async()=>{
+    const x=allItems.find(y=>K(y)===b.dataset.delany);if(!x)return;
+    if(!confirm('Удалить устройство пользователя '+x.owner+'?'))return;
+    try{
+      await api(sess,'sync',{removeAny:[{id:x.id,owner:x.owner}]});
+      allItems=allItems.filter(y=>K(y)!==K(x));sel.delete(K(x));
+      if(x.owner===sess.login){items=items.filter(y=>y.id!==x.id);save(DB_KEY,items);updCnt()}
+      renderList();
+    }catch(e){toast('Ошибка: '+e.message)}
   });
 }
 $('#q').oninput=renderList;
-$('#selAll').onclick=()=>{items.forEach(x=>sel.add(x.id));renderList()};
+$('#selAll').onclick=()=>{curSrc().forEach(x=>sel.add(K(x)));renderList()};
 $('#selNone').onclick=()=>{sel.clear();renderList()};
+
+/* ============ ПОЛЬЗОВАТЕЛИ (админ) ============ */
+async function renderUsers(){
+  if(!sess||sess.role!=='admin')return;
+  const box=$('#usersList');box.innerHTML='<p class="small">Загрузка...</p>';
+  try{
+    const j=await api(sess,'users.list');
+    box.innerHTML=
+      `<div class="item"><div class="t"><b>${esc(sess.login)}</b> (администратор)<br><span class="small">устройств: ${j.adminCount}</span></div></div>`+
+      (j.users.length?j.users.map(u=>`
+      <div class="item"><div class="t"><b>${esc(u.login)}</b><br><span class="small">устройств: ${u.count} · создан ${esc(u.created)}</span></div>
+        <button class="btn sec" data-pw="${esc(u.login)}" title="Сменить пароль">🔑</button>
+        <button class="btn sec" data-ud="${esc(u.login)}" title="Удалить">🗑</button></div>`).join(''):'<p class="small">Других пользователей пока нет.</p>');
+    box.querySelectorAll('[data-pw]').forEach(b=>b.onclick=async()=>{
+      const np=prompt('Новый пароль для '+b.dataset.pw+' (минимум 6 символов):');if(!np)return;
+      try{await api(sess,'users.pass',{target:b.dataset.pw,newPass:np});toast('Пароль изменён ✓')}catch(e){toast(e.message)}
+    });
+    box.querySelectorAll('[data-ud]').forEach(b=>b.onclick=async()=>{
+      if(!confirm('Удалить пользователя '+b.dataset.ud+'? Его устройства в таблице останутся (их можно удалить в «Список → Все пользователи»).'))return;
+      try{await api(sess,'users.del',{target:b.dataset.ud});renderUsers()}catch(e){toast(e.message)}
+    });
+  }catch(e){box.innerHTML='<p class="small">Не удалось загрузить: '+esc(e.message)+'</p>'}
+}
+$('#nuAdd').onclick=async()=>{
+  const l=$('#nuLogin').value.trim(),p=$('#nuPass').value;
+  if(!l||!p){toast('Введите логин и пароль');return}
+  try{await api(sess,'users.add',{newLogin:l,newPass:p});$('#nuLogin').value='';$('#nuPass').value='';toast('Пользователь создан ✓');renderUsers()}
+  catch(e){toast(e.message)}
+};
+
+/* ============ СИНХРОНИЗАЦИЯ ============ */
+const sysave=()=>{if(SY_KEY)save(SY_KEY,sync)};
+const syMsg=t=>{$('#syState').textContent=t};
+function queueUp(id){if(!sess)return;sync.rm=sync.rm.filter(x=>x!==id);if(!sync.up.includes(id))sync.up.push(id);sysave();flush()}
+function queueRm(id){if(!sess)return;sync.up=sync.up.filter(x=>x!==id);if(!sync.rm.includes(id))sync.rm.push(id);sysave();flush()}
+let flushing=false;
+async function flush(){
+  if(!sess||flushing||(!sync.up.length&&!sync.rm.length))return;
+  flushing=true;
+  try{
+    const sent=[...sync.up], rm=[...sync.rm];
+    const up=sent.map(id=>items.find(x=>x.id===id)).filter(Boolean);
+    await api(sess,'sync',{upsert:up,remove:rm});
+    sync.up=sync.up.filter(id=>!sent.includes(id));sync.rm=sync.rm.filter(id=>!rm.includes(id));sysave();
+    syMsg('Синхронизировано ✓ '+new Date().toLocaleTimeString());
+  }catch(e){
+    if(e.code==='auth')logout('Пароль изменён. Войдите заново.');
+    else syMsg('Не отправлено ('+e.message+'). Повторится автоматически, когда появится интернет.');
+  }
+  flushing=false;
+}
+$('#syPush').onclick=()=>{sync.up=items.map(x=>x.id);sync.rm=[];sysave();syMsg('Отправляю...');flush()};
+$('#syPull').onclick=async()=>{
+  try{
+    syMsg('Загружаю...');
+    const j=await api(sess,'pull',{scope:'mine'});
+    const map=new Map(items.map(x=>[x.id,x]));
+    j.items.forEach(x=>{const {owner,...rest}=x;map.set(String(x.id),rest)});
+    items=[...map.values()];save(DB_KEY,items);updCnt();showSize();
+    syMsg('Загружено ✓ Всего устройств: '+items.length);
+  }catch(e){syMsg('Ошибка загрузки: '+e.message)}
+};
+window.addEventListener('online',flush);
 
 /* ============ ДАННЫЕ ============ */
 function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000)}
 function showSize(){const n=new Blob([JSON.stringify(items)]).size;$('#size').textContent=`Устройств: ${items.length}. Размер базы: ${(n/1024).toFixed(1)} КБ.`}
-$('#exp').onclick=()=>dl(new Blob([JSON.stringify({items,settings},null,0)],{type:'application/json'}),'база-списание-'+new Date().toISOString().slice(0,10)+'.json');
+$('#exp').onclick=()=>dl(new Blob([JSON.stringify({items,settings})],{type:'application/json'}),'база-списание-'+new Date().toISOString().slice(0,10)+'.json');
 $('#impBtn').onclick=()=>$('#imp').click();
 $('#imp').onchange=async e=>{
   try{
     const d=JSON.parse(await e.target.files[0].text());
     const inc=Array.isArray(d)?d:d.items;
     const have=new Set(items.map(x=>x.id));
-    inc.forEach(x=>{if(!have.has(x.id))items.push(x)});
+    inc.forEach(x=>{if(!have.has(x.id)){items.push(x);sync.up.push(x.id)}});
     if(d.settings)settings={...d.settings,...settings};
-    save(DB_KEY,items);save(ST_KEY,settings);updCnt();buildSettings();showSize();toast('База загружена ✓');
+    save(DB_KEY,items);save(ST_KEY,settings);sysave();updCnt();buildSettings();showSize();toast('База загружена ✓');flush();
   }catch(err){toast('Не удалось прочитать файл')}
 };
 $('#csv').onclick=()=>{
@@ -390,15 +582,22 @@ $('#csv').onclick=()=>{
   const rows=items.map(x=>FIELDS.map(f=>'"'+String(x[f.k]||'').replace(/"/g,'""')+'"').join(';'));
   dl(new Blob(['\ufeff'+[head.map(h=>'"'+h+'"').join(';'),...rows].join('\r\n')],{type:'text/csv'}),'устройства.csv');
 };
-$('#wipe').onclick=()=>{if(confirm('Удалить ВСЕ устройства? Сначала скачайте базу!')&&confirm('Точно удалить?')){items=[];sel.clear();save(DB_KEY,items);updCnt();showSize()}};
+$('#wipe').onclick=()=>{
+  if(confirm('Очистить список на ЭТОМ устройстве? В Google Таблице данные останутся, их можно вернуть кнопкой «Загрузить из таблицы».')){
+    items=[];sel.clear();sync={up:[],rm:[]};save(DB_KEY,items);sysave();updCnt();showSize();
+  }
+};
 
 /* ============ ДОКУМЕНТЫ (WORD) ============ */
 function buildSettings(){
   $('#settings').innerHTML=SETTINGS.map(s=>`<label>${s.l}</label>`+(s.area?`<textarea rows="3" id="s_${s.k}"></textarea>`:`<input id="s_${s.k}">`)).join('');
   SETTINGS.forEach(s=>{const el=$('#s_'+s.k);el.value=settings[s.k]||'';el.oninput=()=>{settings[s.k]=el.value;save(ST_KEY,settings)}});
 }
-function selected(){const a=items.filter(x=>sel.has(x.id));if(!a.length)toast('Отметьте устройства во вкладке «Список»');return a}
-
+function selected(){
+  const m=new Map();[...items,...allItems].forEach(x=>m.set(K(x),x));
+  const a=[...m.entries()].filter(([k])=>sel.has(k)).map(([,x])=>x);
+  if(!a.length)toast('Отметьте устройства во вкладке «Список»');return a;
+}
 const D=()=>window.docx;
 const P=(text,o={})=>new (D().Paragraph)({alignment:o.al,spacing:{after:o.after??120},children:[new (D().TextRun)({text:text||'',bold:o.b,size:o.sz||24,font:'Times New Roman'})]});
 function cell(t,w,b){return new (D().TableCell)({width:{size:w,type:D().WidthType.PERCENTAGE},children:[P(t,{sz:20,b,after:0})]})}
@@ -457,56 +656,11 @@ async function makeDoc(kind){
 $('#mkAct').onclick=()=>makeDoc('act');
 $('#mkExp').onclick=()=>makeDoc('exp');
 
-/* ============ СИНХРОНИЗАЦИЯ С GOOGLE ТАБЛИЦЕЙ ============ */
-const SY_KEY='writeoff_sync_v1';
-let sync=load(SY_KEY,{url:'',token:'',up:[],rm:[]});
-const sysave=()=>save(SY_KEY,sync);
-const syMsg=t=>{$('#syState').textContent=t};
-function queueUp(id){if(!sync.url)return;sync.rm=sync.rm.filter(x=>x!==id);if(!sync.up.includes(id))sync.up.push(id);sysave();flush()}
-function queueRm(id){if(!sync.url)return;sync.up=sync.up.filter(x=>x!==id);if(!sync.rm.includes(id))sync.rm.push(id);sysave();flush()}
-let flushing=false;
-async function post(body){
-  const r=await fetch(sync.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:sync.token,...body})});
-  const j=await r.json();if(j.error)throw new Error(j.error==='token'?'неверный пароль':j.error);return j;
-}
-async function flush(){
-  if(!sync.url||flushing||(!sync.up.length&&!sync.rm.length))return;
-  flushing=true;
-  try{
-    const up=sync.up.map(id=>items.find(x=>x.id===id)).filter(Boolean), rm=[...sync.rm];
-    const sent=[...sync.up];
-    await post({upsert:up,remove:rm});
-    sync.up=sync.up.filter(id=>!sent.includes(id));sync.rm=sync.rm.filter(id=>!rm.includes(id));sysave();
-    syMsg('Синхронизировано ✓ '+new Date().toLocaleTimeString());
-  }catch(e){syMsg('Не отправлено ('+e.message+'). Повторится автоматически, когда появится интернет.')}
-  flushing=false;
-}
-$('#syUrl').value=sync.url||'';$('#syTok').value=sync.token||'';
-['syUrl','syTok'].forEach(id=>$('#'+id).onchange=()=>{sync.url=$('#syUrl').value.trim();sync.token=$('#syTok').value.trim();sysave()});
-$('#syTest').onclick=async()=>{
-  sync.url=$('#syUrl').value.trim();sync.token=$('#syTok').value.trim();sysave();
-  try{syMsg('Проверяю...');const r=await fetch(sync.url+'?token='+encodeURIComponent(sync.token));const j=await r.json();
-    syMsg(j.error?'Ошибка: неверный пароль':'Подключено ✓ Устройств в таблице: '+j.items.length)}
-  catch(e){syMsg('Не удалось подключиться. Проверьте ссылку и что доступ «Все».')}
-};
-$('#syPush').onclick=()=>{sync.up=items.map(x=>x.id);sync.rm=[];sysave();syMsg('Отправляю...');flush()};
-$('#syPull').onclick=async()=>{
-  try{
-    syMsg('Загружаю...');
-    const r=await fetch(sync.url+'?token='+encodeURIComponent(sync.token));const j=await r.json();
-    if(j.error)throw new Error('неверный пароль');
-    const map=new Map(items.map(x=>[x.id,x]));
-    j.items.forEach(x=>map.set(String(x.id),x));
-    items=[...map.values()];save(DB_KEY,items);updCnt();showSize();
-    syMsg('Загружено ✓ Всего устройств: '+items.length);
-  }catch(e){syMsg('Ошибка загрузки: '+e.message)}
-};
-window.addEventListener('online',flush);
-setTimeout(flush,1500);
-
 /* ============ СТАРТ ============ */
-buildForm();buildSettings();updCnt();
-if('serviceWorker' in navigator&&location.protocol.startsWith('http')){/* офлайн-режим можно добавить позже */}
+(function boot(){
+  const s=load(SESS_KEY,null);
+  if(s&&s.url&&s.login&&s.pass){sess=s;startApp()}else initLogin();
+})();
 </script>
 </body>
 </html>
