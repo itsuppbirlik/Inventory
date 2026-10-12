@@ -339,10 +339,12 @@ document.querySelectorAll('header button').forEach(b=>b.onclick=()=>{
 });
 
 /* ============ ФОРМА ============ */
+function deviceTypes(){return Array.isArray(settings.deviceTypes)?settings.deviceTypes:DEVICE_TYPES;}
+function manageDeviceType(remove){if(!sess||sess.role!=='admin')return;const list=deviceTypes();if(remove){const name=prompt('Введите точное название типа для удаления:\n\n'+list.join('\n'));if(!name)return;const i=list.findIndex(x=>x.toLowerCase()===name.trim().toLowerCase());if(i<0){toast('Тип не найден');return}if(!confirm('Удалить тип «'+list[i]+'»?'))return;list.splice(i,1)}else{const name=prompt('Название нового типа устройства:');if(!name||!name.trim())return;if(list.some(x=>x.toLowerCase()===name.trim().toLowerCase())){toast('Такой тип уже есть');return}list.push(name.trim())}settings.deviceTypes=list;save(ST_KEY,settings);buildForm();toast('Список типов обновлён')}
 function buildForm(){
   $('#fields').innerHTML=FIELDS.map(f=>`
     <label>${f.l}</label>
-    ${f.opts?`<select id="t_${f.k}" style="margin-bottom:6px"><option value="">— выберите из списка —</option>${DEVICE_TYPES.map(t=>`<option>${esc(t)}</option>`).join('')}<option value="__other">Другое (ввести вручную)</option></select>`:''}
+    ${f.opts?`<select id="t_${f.k}" style="margin-bottom:6px"><option value="">— выберите из списка —</option>${deviceTypes().map(t=>`<option>${esc(t)}</option>`).join('')}<option value="__other">Другое (ввести вручную)</option></select>${sess&&sess.role==='admin'?`<div class="btns"><button type="button" class="btn sec" id="addDeviceType">＋ Добавить тип</button><button type="button" class="btn sec" id="removeDeviceType">− Удалить тип</button></div>`:''}`:''}
     <div class="row">
       <input id="f_${f.k}" placeholder="${f.ph||''}" autocomplete="off">
       ${f.cam?`<button class="cam" type="button" data-cam="${f.k}" title="Сканировать камерой">📷</button>`:''}
@@ -424,6 +426,7 @@ function cvPos(ev){
     crop={x:Math.min(p.x,dragStart.x),y:Math.min(p.y,dragStart.y),w:Math.abs(p.x-dragStart.x),h:Math.abs(p.y-dragStart.y)};drawCrop()};
   cv.onpointerup=cv.onpointercancel=()=>{dragStart=null};
 })();
+document.addEventListener('click',e=>{if(e.target.id==='addDeviceType')manageDeviceType(false);if(e.target.id==='removeDeviceType')manageDeviceType(true)});
 $('#cropCancel').onclick=closeCrop;
 $('#cropGo').onclick=()=>runOcr(true);
 $('#cropAll').onclick=()=>{crop=null;drawCrop();runOcr(false)};
@@ -662,17 +665,26 @@ $('#wipe').onclick=()=>{
 
 /* ============ ДОКУМЕНТЫ (WORD) ============ */
 function peopleRoster(){
-  const base=[...EXPERTS,'Vijay Norbert','Ulyana Serikbayeva'];
-  const saved=Array.isArray(settings.peopleRoster)?settings.peopleRoster:[];
-  return [...new Set([...base,...saved].map(x=>String(x||'').trim()).filter(Boolean))];
+  const saved=Array.isArray(settings.peopleRoster)?settings.peopleRoster:EXPERTS;
+  return [...new Set(saved.map(x=>String(x||'').trim()).filter(Boolean))];
 }
 function addRosterPerson(){
   if(!sess||sess.role!=='admin'){toast('Добавлять людей может только администратор');return}
   const name=prompt('Введите ФИО нового участника комиссии / эксперта:');
   if(!name||!name.trim())return;
   const roster=peopleRoster();
-  if(!roster.some(x=>x.toLocaleLowerCase()===name.trim().toLocaleLowerCase()))roster.push(name.trim());
-  settings.peopleRoster=roster;save(ST_KEY,settings);buildSettings();toast('Человек добавлен в список ✓');
+  if(roster.some(x=>x.toLocaleLowerCase()===name.trim().toLocaleLowerCase())){toast('Такое имя уже есть в списке');return}
+  roster.push(name.trim());settings.peopleRoster=roster;save(ST_KEY,settings);buildSettings();toast('Человек добавлен в список ✓');
+}
+function removeRosterPerson(){
+  if(!sess||sess.role!=='admin'){toast('Удалять людей может только администратор');return}
+  const roster=peopleRoster();const name=prompt('Введите точное имя, которое нужно удалить:\n\n'+roster.join('\n'));
+  if(!name)return;const idx=roster.findIndex(x=>x.toLocaleLowerCase()===name.trim().toLocaleLowerCase());
+  if(idx<0){toast('Имя не найдено');return}if(!confirm('Удалить «'+roster[idx]+'» из списков председателя, членов комиссии и экспертов?'))return;
+  const removed=roster.splice(idx,1)[0];settings.peopleRoster=roster;
+  ['chair','expert'].forEach(k=>{if(settings[k]===removed)settings[k]=''});
+  if(settings.members)settings.members=String(settings.members).split('\n').filter(x=>x!==removed).join('\n');
+  save(ST_KEY,settings);buildSettings();toast('Человек удалён из списка');
 }
 function buildSettings(){
   const roster=peopleRoster();
@@ -686,7 +698,7 @@ function buildSettings(){
       control=`<select id="s_${s.k}"><option value="">— выберите человека —</option>${roster.map(v=>`<option value="${esc(v)}" ${value===v?'selected':''}>${esc(v)}</option>`).join('')}</select>`;
     }else if(s.type==='cost') control=`<select id="s_${s.k}"><option value="">— выберите центр затрат —</option>${COST_CENTERS.map(v=>`<option value="${v}">${v}</option>`).join('')}</select>`;
     else control=`<input id="s_${s.k}" ${s.k==='date'?'placeholder="ДД.ММ.ГГГГ"':''}>`;
-    const adminTools=(s.type==='chair'||s.type==='members'||s.type==='expert')?`<button type="button" class="btn sec adm" style="margin-top:6px;font-size:14px;padding:8px 10px" id="addPerson_${s.k}">＋ Добавить человека в список</button>`:'';
+    const adminTools=(s.type==='chair'||s.type==='members'||s.type==='expert')?`<div class="btns adm" style="margin-top:6px"><button type="button" class="btn sec" style="font-size:14px;padding:8px 10px" id="addPerson_${s.k}">＋ Добавить</button><button type="button" class="btn sec" style="font-size:14px;padding:8px 10px" id="removePerson_${s.k}">− Удалить из списка</button></div>`:'';
     return `<label>${s.l}</label>${control}${adminTools}`;
   }).join('');
   const defaults={date:todayText(),location:'Birlik',expert:EXPERTS[0],members:EXPERTS.join('\n')};
@@ -703,7 +715,7 @@ function buildSettings(){
       if(settings[s.k]===undefined){settings[s.k]=el.value;save(ST_KEY,settings)}
     }
     if(s.type==='chair'||s.type==='members'||s.type==='expert'){
-      const b=$('#addPerson_'+s.k);if(b)b.onclick=addRosterPerson;
+      const b=$('#addPerson_'+s.k);if(b)b.onclick=addRosterPerson;const rb=$('#removePerson_'+s.k);if(rb)rb.onclick=removeRosterPerson;
     }
   });
 }
