@@ -751,14 +751,10 @@ function excelText(value, seen=new Set()){
 }
 function setCell(ws, address, value){
   if(value===undefined||value===null) return;
-  // В ячейки записываем только скалярные значения Excel, не JS-объекты.
+  // Меняем ТОЛЬКО значение. Не трогаем выравнивание, перенос строк,
+  // ширину столбцов, высоту строк, границы и объединения исходного шаблона.
   if(typeof value==='object'&&!(value instanceof Date)) value=excelText(value);
   ws.getCell(address).value=value;
-  ws.getCell(address).alignment={...ws.getCell(address).alignment,vertical:'middle',wrapText:true};
-}
-function appendLabel(ws,address,label,value){
-  const c=ws.getCell(address); const old=excelText(c.value).trim()||label;
-  c.value=old+(value?'  '+excelText(value):''); c.alignment={...c.alignment,wrapText:true,vertical:'middle'};
 }
 function fileSafe(s){return String(s||'без-номера').replace(/[\\/:*?"<>|\s]+/g,'-').slice(0,80)}
 async function makeExcelTemplate(kind){
@@ -767,14 +763,15 @@ async function makeExcelTemplate(kind){
     if(kind==='exp'&&list.length!==1){toast('Для экспертного заключения выберите ровно одно устройство.');return;}
     if(kind==='act'&&list.length>3){toast('В шаблоне акта предусмотрено 3 строки. Выберите не более 3 устройств.');return;}
     const s=settings||{}; const wb=await openTemplate(kind==='act'?TEMPLATE_ACT:TEMPLATE_EXP);
-    // В исходных книгах есть второй лист с демонстрационными данными — в готовый документ его не включаем.
-    wb.worksheets.slice(1).forEach(sh=>wb.removeWorksheet(sh.id));
+    // Сохраняем все листы и структуру исходного файла. Заполняем только нужные ячейки первого листа.
     const date=dateForExcel(s.date||todayText());
     if(kind==='act'){
       const ws=wb.worksheets[0];
-      appendLabel(ws,'H7','Date',dateRu(date));
-      appendLabel(ws,'J7','Cost center',s.costCenter||'');
-      appendLabel(ws,'K7','Person responsible for the asset',s.chair||'');
+      // Строка 7 — это подписи полей. Значения пишем строго в поля под ними (строка 8).
+      setCell(ws,'H8',dateRu(date));
+      setCell(ws,'J8',s.costCenter||'');
+      // Ответственного не подменяем председателем комиссии; заполняем только если такое поле есть в настройках.
+      if(s.responsible) setCell(ws,'K8',s.responsible);
       list.forEach((x,i)=>{
         const r=23+i;
         setCell(ws,'B'+r,[excelText(x.name),excelText(x.model)].filter(Boolean).join(' — '));
@@ -785,14 +782,17 @@ async function makeExcelTemplate(kind){
         setCell(ws,'I'+r,excelText(x.year));
         const priceText=excelText(x.price); if(priceText) {const n=Number(priceText.replace(/\s/g,'').replace(',','.')); if(Number.isFinite(n)){setCell(ws,'J'+r,n);ws.getCell('J'+r).numFmt='#,##0.00';}}
       });
-      setCell(ws,'E28',list.map(x=>excelText(x.cond)).filter(Boolean).join('; '));
-      setCell(ws,'E29',list.map(x=>excelText(x.cond)).filter(Boolean).join('; ')||'Оборудование подлежит списанию.');
+      const reasons=list.map(x=>excelText(x.cond)).filter(Boolean).join('; ');
+      setCell(ws,'E27',reasons);
+      setCell(ws,'E28',reasons);
+      setCell(ws,'E29','Оборудование подлежит списанию.');
       // Состав комиссии: сохраняем оформление исходного бланка, меняем только имена.
       const members=(s.members||EXPERTS.join('\n')).split('\n').map(v=>v.trim()).filter(Boolean);
       if(s.chair) setCell(ws,'G31',s.chair);
       if(members[0]) setCell(ws,'G33',members[0]);
       if(members[1]) setCell(ws,'G35',members[1]);
-      appendLabel(ws,'A42','Number of document and date / номер документа и дата',(s.docNo||'')+' '+dateRu(date));
+      // Подпись находится в A42:C42, поле для номера и даты — справа, в D42:M42.
+      setCell(ws,'D42',[s.docNo?('№ '+excelText(s.docNo)):'',dateRu(date)].filter(Boolean).join(' от '));
     } else {
       const ws=wb.worksheets[0], x=list[0];
       setCell(ws,'B10',[excelText(x.name),excelText(x.model)].filter(Boolean).join(' — '));
@@ -812,8 +812,7 @@ async function makeExcelTemplate(kind){
       const other=EXPERTS.find(n=>n!==(s.expert||EXPERTS[0]));
       setCell(ws,'D41',other||''); setCell(ws,'L41',dateRu(date));
       setCell(ws,'D43',s.chair||''); setCell(ws,'L43',dateRu(date));
-      // Номер документа добавляем в заголовок, не меняя исходную форму.
-      if(s.docNo) setCell(ws,'B6',excelText(ws.getCell('B6').value)+'  № '+excelText(s.docNo));
+      // Не меняем заголовок/макет экспертного заключения — заполняем только предназначенные поля.
     }
     const buffer=await wb.xlsx.writeBuffer();
     const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
