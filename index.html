@@ -228,8 +228,8 @@ const SETTINGS = [
   {k:'date',l:'Дата документа'},
   {k:'costCenter',l:'Центр затрат',type:'cost'},
   {k:'location',l:'Местонахождение'},
-  {k:'chair',l:'Председатель комиссии (должность, ФИО)'},
-  {k:'members',l:'Члены комиссии (каждый с новой строки)',area:true},
+  {k:'chair',l:'Председатель комиссии',type:'chair'},
+  {k:'members',l:'Члены комиссии',type:'members'},
   {k:'expert',l:'Эксперт',type:'expert'},
   {k:'basis',l:'Основание (приказ №, дата)'}
 ];
@@ -661,21 +661,50 @@ $('#wipe').onclick=()=>{
 };
 
 /* ============ ДОКУМЕНТЫ (WORD) ============ */
+function peopleRoster(){
+  const base=[...EXPERTS,'Vijay Norbert','Ulyana Serikbayeva'];
+  const saved=Array.isArray(settings.peopleRoster)?settings.peopleRoster:[];
+  return [...new Set([...base,...saved].map(x=>String(x||'').trim()).filter(Boolean))];
+}
+function addRosterPerson(){
+  if(!sess||sess.role!=='admin'){toast('Добавлять людей может только администратор');return}
+  const name=prompt('Введите ФИО нового участника комиссии / эксперта:');
+  if(!name||!name.trim())return;
+  const roster=peopleRoster();
+  if(!roster.some(x=>x.toLocaleLowerCase()===name.trim().toLocaleLowerCase()))roster.push(name.trim());
+  settings.peopleRoster=roster;save(ST_KEY,settings);buildSettings();toast('Человек добавлен в список ✓');
+}
 function buildSettings(){
+  const roster=peopleRoster();
   $('#settings').innerHTML=SETTINGS.map(s=>{
     let control;
-    if(s.area) control=`<textarea rows="3" id="s_${s.k}"></textarea>`;
-    else if(s.type==='expert') control=`<select id="s_${s.k}">${EXPERTS.map(v=>`<option value="${v}">${v}</option>`).join('')}</select>`;
-    else if(s.type==='cost') control=`<select id="s_${s.k}"><option value="">— выберите центр затрат —</option>${COST_CENTERS.map(v=>`<option value="${v}">${v}</option>`).join('')}</select>`;
+    if(s.type==='members'){
+      const current=String(settings.members||'').split('\n').map(x=>x.trim()).filter(Boolean);
+      control=`<select id="s_members" multiple size="${Math.min(5,Math.max(3,roster.length))}" aria-label="Выберите членов комиссии">${roster.map(v=>`<option value="${esc(v)}" ${current.includes(v)?'selected':''}>${esc(v)}</option>`).join('')}</select><p class="small">Чтобы выбрать несколько человек, нажимайте на нужные имена. На телефоне можно выбрать несколько строк по очереди.</p>`;
+    }else if(s.type==='chair'||s.type==='expert'){
+      const value=settings[s.k]||'';
+      control=`<select id="s_${s.k}"><option value="">— выберите человека —</option>${roster.map(v=>`<option value="${esc(v)}" ${value===v?'selected':''}>${esc(v)}</option>`).join('')}</select>`;
+    }else if(s.type==='cost') control=`<select id="s_${s.k}"><option value="">— выберите центр затрат —</option>${COST_CENTERS.map(v=>`<option value="${v}">${v}</option>`).join('')}</select>`;
     else control=`<input id="s_${s.k}" ${s.k==='date'?'placeholder="ДД.ММ.ГГГГ"':''}>`;
-    return `<label>${s.l}</label>${control}`;
+    const adminTools=(s.type==='chair'||s.type==='members'||s.type==='expert')?`<button type="button" class="btn sec adm" style="margin-top:6px;font-size:14px;padding:8px 10px" id="addPerson_${s.k}">＋ Добавить человека в список</button>`:'';
+    return `<label>${s.l}</label>${control}${adminTools}`;
   }).join('');
   const defaults={date:todayText(),location:'Birlik',expert:EXPERTS[0],members:EXPERTS.join('\n')};
   SETTINGS.forEach(s=>{
     const el=$('#s_'+s.k);
-    el.value=settings[s.k]!==undefined?settings[s.k]:(defaults[s.k]||'');
-    el.onchange=el.oninput=()=>{settings[s.k]=el.value;save(ST_KEY,settings)};
-    if(settings[s.k]===undefined){settings[s.k]=el.value;save(ST_KEY,settings)}
+    if(s.type==='members'){
+      const current=String(settings.members!==undefined?settings.members:(defaults.members||'')).split('\n').map(x=>x.trim()).filter(Boolean);
+      [...el.options].forEach(o=>o.selected=current.includes(o.value));
+      if(settings.members===undefined){settings.members=current.join('\n');save(ST_KEY,settings)}
+      el.onchange=()=>{settings.members=[...el.selectedOptions].map(o=>o.value).join('\n');save(ST_KEY,settings)};
+    }else{
+      el.value=settings[s.k]!==undefined?settings[s.k]:(defaults[s.k]||'');
+      el.onchange=el.oninput=()=>{settings[s.k]=el.value;save(ST_KEY,settings)};
+      if(settings[s.k]===undefined){settings[s.k]=el.value;save(ST_KEY,settings)}
+    }
+    if(s.type==='chair'||s.type==='members'||s.type==='expert'){
+      const b=$('#addPerson_'+s.k);if(b)b.onclick=addRosterPerson;
+    }
   });
 }
 function selected(){
@@ -842,13 +871,12 @@ async function makeExcelTemplate(kind){
       });
       const reasons=list.map(x=>excelText(x.cond)).filter(Boolean).join('; ');
       put('E27',reasons); put('E28',reasons); put('E29','Оборудование подлежит списанию.');
-      // По просьбе: имя председателя (Vijay Norbert) и Internal Auditor пустые.
-      // Выбранный эксперт пишется только напротив IT Specialist.
-      put('G31',''); put('K31','Camp Manager');
-      put('G33','');
+      // Участники комиссии берутся из выбранных значений во вкладке «Документы».
+      const committeeMembers=String(s.members||'').split('\n').map(v=>v.trim()).filter(Boolean);
+      put('G31',s.chair||''); put('K31','Camp Manager');
+      put('G33',committeeMembers[0]||'');
       put('G35',s.expert||EXPERTS[0]);
-      // Нижняя строка с Ulyana Serikbayeva и Lead Commercial Specialist должна быть пустой.
-      put('G37',''); put('K37','');
+      put('G37',committeeMembers[1]||''); put('K37','');
       // Поле «Number of document and date» оставляем пустым, включая область значения.
       put('D42',''); put('E42','');
     } else {
