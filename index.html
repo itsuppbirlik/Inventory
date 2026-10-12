@@ -37,6 +37,12 @@
   .hide{display:none}
   .toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:9;opacity:0;transition:.3s;pointer-events:none}
   .toast.on{opacity:1}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:20;display:none;flex-direction:column;align-items:center;padding:10px;overflow:auto;color:#fff}
+  .modal.on{display:flex}
+  #cropCv{touch-action:none;max-width:100%;border-radius:6px;background:#000}
+  .modal .btns{justify-content:center}
+  .modal label.chk{display:flex;gap:8px;align-items:center;color:#ddd;font-size:14px;margin:10px 0 0}
+  .modal label.chk input{width:20px;height:20px}
 </style>
 </head>
 <body>
@@ -119,6 +125,17 @@
 
 </main>
 <div class="toast" id="toast"></div>
+<div class="modal" id="cropModal">
+  <p id="cropHint" style="margin:6px 0;text-align:center;font-size:15px">Обведите пальцем только нужную строку (номер, серийник)</p>
+  <canvas id="cropCv"></canvas>
+  <label class="chk"><input type="checkbox" id="bw"> Чёрно-белый режим (если не читает)</label>
+  <p id="cropSt" style="margin:6px 0;font-size:14px;color:#9cf;text-align:center"></p>
+  <div class="btns">
+    <button class="btn" id="cropGo">Распознать</button>
+    <button class="btn sec" id="cropAll">Всё фото</button>
+    <button class="btn sec" id="cropCancel">Отмена</button>
+  </div>
+</div>
 <input type="file" id="photo" accept="image/*" capture="environment" class="hide">
 
 <script>
@@ -199,57 +216,131 @@ $('#saveNext').onclick=()=>saveItem(true);
 $('#clear').onclick=()=>clearForm(false);
 
 /* ============ СКАНИРОВАНИЕ (OCR) ============ */
-let scanField=null, worker=null;
+let scanField=null, worker=null, srcBmp=null, crop=null, dragStart=null, busy=false;
+const NUMF={asset:1,serial:1};
 function startScan(k){scanField=k;$('#photo').value='';$('#photo').click()}
-async function downscale(file,max=1600){
-  const bmp=await createImageBitmap(file);
-  const r=Math.min(1,max/Math.max(bmp.width,bmp.height));
-  const c=document.createElement('canvas');c.width=Math.round(bmp.width*r);c.height=Math.round(bmp.height*r);
-  const x=c.getContext('2d');x.filter='grayscale(1) contrast(1.4)';x.drawImage(bmp,0,0,c.width,c.height);
-  return c;
-}
 $('#photo').onchange=async e=>{
   const file=e.target.files[0];if(!file)return;
-  const st=$('#ocrStatus');$('#chips').innerHTML='';
+  try{srcBmp=await createImageBitmap(file)}catch(err){toast('Не удалось открыть фото');return}
+  openCrop();
+};
+function openCrop(){
+  $('#cropModal').classList.add('on');
+  const cv=$('#cropCv');
+  const maxW=Math.min(window.innerWidth-24,720), maxH=window.innerHeight*0.6;
+  const r=Math.min(maxW/srcBmp.width,maxH/srcBmp.height);
+  cv.width=Math.round(srcBmp.width*r);cv.height=Math.round(srcBmp.height*r);cv.dataset.r=r;
+  crop=null;$('#cropSt').textContent='';drawCrop();
+}
+function closeCrop(){$('#cropModal').classList.remove('on');if(srcBmp&&srcBmp.close)srcBmp.close();srcBmp=null;crop=null}
+function drawCrop(){
+  const cv=$('#cropCv'),x=cv.getContext('2d');
+  x.drawImage(srcBmp,0,0,cv.width,cv.height);
+  if(crop){
+    x.fillStyle='rgba(0,0,0,.55)';
+    x.fillRect(0,0,cv.width,crop.y);
+    x.fillRect(0,crop.y+crop.h,cv.width,cv.height-crop.y-crop.h);
+    x.fillRect(0,crop.y,crop.x,crop.h);
+    x.fillRect(crop.x+crop.w,crop.y,cv.width-crop.x-crop.w,crop.h);
+    x.strokeStyle='#4da3ff';x.lineWidth=3;x.strokeRect(crop.x,crop.y,crop.w,crop.h);
+  }
+}
+function cvPos(ev){
+  const cv=$('#cropCv'),b=cv.getBoundingClientRect();
+  return{x:Math.max(0,Math.min(b.width,ev.clientX-b.left))*cv.width/b.width,
+         y:Math.max(0,Math.min(b.height,ev.clientY-b.top))*cv.height/b.height};
+}
+(()=>{
+  const cv=$('#cropCv');
+  cv.onpointerdown=ev=>{ev.preventDefault();cv.setPointerCapture(ev.pointerId);dragStart=cvPos(ev);crop={x:dragStart.x,y:dragStart.y,w:0,h:0};drawCrop()};
+  cv.onpointermove=ev=>{if(!dragStart)return;const p=cvPos(ev);
+    crop={x:Math.min(p.x,dragStart.x),y:Math.min(p.y,dragStart.y),w:Math.abs(p.x-dragStart.x),h:Math.abs(p.y-dragStart.y)};drawCrop()};
+  cv.onpointerup=cv.onpointercancel=()=>{dragStart=null};
+})();
+$('#cropCancel').onclick=closeCrop;
+$('#cropGo').onclick=()=>runOcr(true);
+$('#cropAll').onclick=()=>{crop=null;drawCrop();runOcr(false)};
+
+function otsu(g){
+  const h=new Array(256).fill(0);for(let i=0;i<g.length;i++)h[g[i]]++;
+  const tot=g.length;let sum=0;for(let i=0;i<256;i++)sum+=i*h[i];
+  let sB=0,wB=0,max=0,th=127;
+  for(let i=0;i<256;i++){wB+=h[i];if(!wB)continue;const wF=tot-wB;if(!wF)break;sB+=i*h[i];
+    const mB=sB/wB,mF=(sum-sB)/wF,v=wB*wF*(mB-mF)*(mB-mF);if(v>max){max=v;th=i}}
+  return th;
+}
+function preprocess(cv,bw){
+  const x=cv.getContext('2d'),id=x.getImageData(0,0,cv.width,cv.height),d=id.data,n=cv.width*cv.height;
+  const g=new Uint8Array(n),hist=new Uint32Array(256);
+  for(let i=0;i<n;i++){const v=(d[i*4]*.299+d[i*4+1]*.587+d[i*4+2]*.114)|0;g[i]=v;hist[v]++}
+  let lo=0,hi=255,c=0;
+  for(lo=0;lo<255&&(c+=hist[lo])<n*.01;lo++);
+  c=0;for(hi=255;hi>0&&(c+=hist[hi])<n*.01;hi--);
+  if(hi-lo<20){lo=0;hi=255}
+  let sum=0;
+  for(let i=0;i<n;i++){let v=(g[i]-lo)*255/(hi-lo);v=v<0?0:v>255?255:v;g[i]=v;sum+=v}
+  const invert=sum/n<110; // светлый текст на тёмном фоне
+  if(bw){const th=otsu(g);for(let i=0;i<n;i++)g[i]=g[i]>th?255:0}
+  for(let i=0;i<n;i++){const v=invert?255-g[i]:g[i];d[i*4]=d[i*4+1]=d[i*4+2]=v;d[i*4+3]=255}
+  x.putImageData(id,0,0);
+}
+async function runOcr(useCrop){
+  if(busy||!srcBmp)return;busy=true;
+  const st=$('#cropSt');
   try{
-    st.textContent='Подготовка фото...';
-    const canvas=await downscale(file);
+    const r=+$('#cropCv').dataset.r;
+    let sx=0,sy=0,sw=srcBmp.width,sh=srcBmp.height;
+    if(useCrop&&crop&&crop.w>15&&crop.h>10){sx=crop.x/r;sy=crop.y/r;sw=crop.w/r;sh=crop.h/r}
+    else if(useCrop){toast('Сначала обведите рамкой нужную строку');busy=false;return}
+    const sc=Math.min(3,1800/sw);
+    const cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(sw*sc));cv.height=Math.max(1,Math.round(sh*sc));
+    cv.getContext('2d').drawImage(srcBmp,sx,sy,sw,sh,0,0,cv.width,cv.height);
+    preprocess(cv,$('#bw').checked);
     if(!worker){
       st.textContent='Загрузка распознавания (первый раз ~10 сек)...';
-      worker=await Tesseract.createWorker('eng+rus',1,{logger:m=>{if(m.status==='recognizing text')st.textContent='Распознаю: '+Math.round(m.progress*100)+'%'}});
+      worker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')$('#cropSt').textContent='Распознаю: '+Math.round(m.progress*100)+'%'}});
     }
-    const {data}=await worker.recognize(canvas);
-    canvas.width=canvas.height=1; // фото не сохраняем
-    showCandidates(data.text);
-  }catch(err){st.textContent='Ошибка распознавания: '+err.message+'. Нужен интернет при первом запуске.'}
-};
+    const num=NUMF[scanField];
+    await worker.setParameters({
+      tessedit_char_whitelist:num?'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/._':'',
+      tessedit_pageseg_mode:(cv.width/cv.height>4)?'7':'6',
+      preserve_interword_spaces:'1'
+    });
+    st.textContent='Распознаю...';
+    const {data}=await worker.recognize(cv);
+    let lines=(data.lines||[]).map(l=>(l.words||[]).filter(w=>w.confidence>50).map(w=>w.text).join(' ').trim()).filter(Boolean);
+    if(!lines.length)lines=(data.text||'').split(/\n+/);
+    cv.width=cv.height=1; // фото не сохраняем
+    closeCrop();
+    showCandidates(lines.join('\n'));
+  }catch(err){st.textContent='Ошибка: '+err.message+'. Нужен интернет при первом запуске.'}
+  busy=false;
+}
 function showCandidates(text){
-  const f=FIELDS.find(x=>x.k===scanField);
+  const f=FIELDS.find(x=>x.k===scanField), num=NUMF[scanField];
   const lines=text.split(/\n+/).map(s=>s.trim()).filter(s=>s.length>1);
   let tokens=[];
   lines.forEach(l=>{
-    // часть после двоеточия (S/N: ABC123)
     const m=l.match(/[:#№]\s*([A-Za-z0-9\-\/._ ]{3,})$/);
     if(m)tokens.push(m[1].trim());
     tokens.push(l);
     l.split(/\s+/).forEach(w=>{if(w.length>=4)tokens.push(w.replace(/^[^\w]+|[^\w]+$/g,''))});
   });
   tokens=[...new Set(tokens.filter(t=>t.length>=3))];
-  if(f.pat){ // сначала то, что похоже на номер: буквы+цифры/цифры
-    const score=t=>(/\d/.test(t)?2:0)+(/^[A-Za-z0-9\-\/._]+$/.test(t)?2:0)+(t.length>=5&&t.length<=24?1:0);
+  if(num){
+    const withDigit=tokens.filter(t=>/\d/.test(t));
+    if(withDigit.length)tokens=withDigit;
+    const score=t=>(/^[A-Za-z0-9\-\/._]+$/.test(t)?2:0)+(t.length>=5&&t.length<=24?1:0)-(/\s/.test(t)?1:0);
     tokens.sort((a,b)=>score(b)-score(a));
   }
-  tokens=tokens.slice(0,18);
+  tokens=tokens.slice(0,12);
   const st=$('#ocrStatus');
-  if(!tokens.length){st.textContent='Текст не найден. Сфотографируйте ближе и при хорошем свете.';return}
-  st.textContent='Нажмите на нужный вариант — он вставится в поле «'+f.l+'»:';
+  if(!tokens.length){st.textContent='Текст не найден. Снимите ближе, при хорошем свете, и обведите только нужную строку.';$('#chips').innerHTML='';return}
+  st.textContent='Нажмите на нужный вариант — он вставится в поле «'+f.l+'». Если не то — повторите съёмку.';
   $('#chips').innerHTML=tokens.map(t=>`<span class="chip">${esc(t)}</span>`).join('');
-  document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{
-    const el=$('#f_'+scanField);el.value=c.textContent.toUpperCase()===c.textContent||f.pat?c.textContent:c.textContent;
-    toast('Вставлено ✓');
-  });
-  // первый вариант вставляем автоматически, если поле пустое
-  const el=$('#f_'+scanField);if(!el.value&&f.pat)el.value=tokens[0];
+  document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{$('#f_'+scanField).value=c.textContent;toast('Вставлено ✓')});
+  const el=$('#f_'+scanField);if(!el.value&&num)el.value=tokens[0];
+  $('#chips').scrollIntoView({block:'center',behavior:'smooth'});
 }
 
 /* ============ СПИСОК ============ */
