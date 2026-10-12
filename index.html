@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
   :root{--bg:#f5f6f8;--card:#fff;--tx:#1b1f24;--mut:#667;--ac:#1a56db;--bd:#d9dde3;--ok:#0a7d3b;--bad:#c0262d}
   @media (prefers-color-scheme:dark){:root{--bg:#14171a;--card:#1d2126;--tx:#e8eaed;--mut:#9aa3ad;--ac:#6ea0ff;--bd:#323941}}
@@ -721,14 +721,16 @@ function dateForExcel(value){
   const d=new Date(value); return Number.isNaN(d.getTime())?new Date():d;
 }
 function dateRu(value){return dateForExcel(value).toLocaleDateString('ru-RU');}
-async function openTemplate(file){
-  if(!window.ExcelJS) throw new Error('Не загрузилась библиотека Excel. Проверьте подключение к интернету.');
+async function openTemplateZip(file){
+  if(!window.JSZip) throw new Error('Не загрузилась библиотека для сохранения Excel. Проверьте интернет-соединение.');
   const response=await fetch(encodeURI(file));
   if(!response.ok) throw new Error('Не найден файл «'+file+'». Загрузите его в ту же папку GitHub Pages, где находится index.html.');
-  const wb=new ExcelJS.Workbook(); await wb.xlsx.load(await response.arrayBuffer()); return wb;
+  // Меняем лишь XML первой страницы внутри архива. Все остальные части шаблона,
+  // включая стили, объединения, изображения, внешние ссылки и настройки печати,
+  // остаются нетронутыми. Это предотвращает предупреждение Excel о восстановлении.
+  return await JSZip.loadAsync(await response.arrayBuffer());
 }
 // Приводит значения из браузерной базы/Google Sheets к обычному тексту.
-// Иначе объект JavaScript при записи превращается в буквальное «[object Object]».
 function excelText(value, seen=new Set()){
   if(value===undefined||value===null) return '';
   if(typeof value==='string') return value;
@@ -749,12 +751,39 @@ function excelText(value, seen=new Set()){
   }
   return String(value);
 }
-function setCell(ws, address, value){
-  if(value===undefined||value===null) return;
-  // Меняем ТОЛЬКО значение. Не трогаем выравнивание, перенос строк,
-  // ширину столбцов, высоту строк, границы и объединения исходного шаблона.
-  if(typeof value==='object'&&!(value instanceof Date)) value=excelText(value);
-  ws.getCell(address).value=value;
+function xmlEscape(value){
+  return String(value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+// Обновляет значение одной ячейки, сохраняя все её стилевые атрибуты.
+// Строки записываются как inline strings — не меняем sharedStrings.xml и другие листы.
+function setWorksheetCell(xml, address, value){
+  const safeAddress=address.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const re=new RegExp('<c\\b(?=[^>]*\\br="'+safeAddress+'")[^>]*?(?:\\/>|>[\\s\\S]*?<\\/c>)');
+  const found=xml.match(re);
+  if(!found) throw new Error('В шаблоне не найдена ячейка '+address+'. Проверьте исходный Excel-файл.');
+  const fragment=found[0];
+  const gt=fragment.indexOf('>');
+  let opening=fragment.slice(0,gt).replace(/\/$/,'');
+  opening=opening.replace(/\s+t="[^"]*"/,'');
+  let replacement;
+  if(value===undefined||value===null||value===''){
+    // Сохраняем формат ячейки, но убираем старый текст полностью.
+    replacement=opening+'/>';
+  }else if(typeof value==='number'&&Number.isFinite(value)){
+    replacement=opening+'><v>'+String(value)+'</v></c>';
+  }else{
+    replacement=opening+' t="inlineStr"><is><t xml:space="preserve">'+xmlEscape(excelText(value))+'</t></is></c>';
+  }
+  return xml.replace(fragment,replacement);
+}
+async function writeTemplateCells(zip, cells){
+  const path='xl/worksheets/sheet1.xml';
+  const entry=zip.file(path);
+  if(!entry) throw new Error('В Excel-шаблоне не найден основной лист.');
+  let xml=await entry.async('string');
+  for(const [address,value] of Object.entries(cells)) xml=setWorksheetCell(xml,address,value);
+  zip.file(path,xml);
 }
 function fileSafe(s){return String(s||'без-номера').replace(/[\\/:*?"<>|\s]+/g,'-').slice(0,80)}
 async function makeExcelTemplate(kind){
@@ -762,64 +791,58 @@ async function makeExcelTemplate(kind){
     const list=selected(); if(!list.length)return;
     if(kind==='exp'&&list.length!==1){toast('Для экспертного заключения выберите ровно одно устройство.');return;}
     if(kind==='act'&&list.length>3){toast('В шаблоне акта предусмотрено 3 строки. Выберите не более 3 устройств.');return;}
-    const s=settings||{}; const wb=await openTemplate(kind==='act'?TEMPLATE_ACT:TEMPLATE_EXP);
-    // Сохраняем все листы и структуру исходного файла. Заполняем только нужные ячейки первого листа.
+    const s=settings||{}; const zip=await openTemplateZip(kind==='act'?TEMPLATE_ACT:TEMPLATE_EXP);
     const date=dateForExcel(s.date||todayText());
+    const cells={};
+    const put=(address,value)=>{cells[address]=value===undefined||value===null?'':value;};
     if(kind==='act'){
-      const ws=wb.worksheets[0];
-      // Строка 7 — это подписи полей. Значения пишем строго в поля под ними (строка 8).
-      setCell(ws,'H8',dateRu(date));
-      setCell(ws,'J8',s.costCenter||'');
-      // Ответственного не подменяем председателем комиссии; заполняем только если такое поле есть в настройках.
-      if(s.responsible) setCell(ws,'K8',s.responsible);
+      // Дата и центр затрат находятся под своими подписями, отдельно от заголовков.
+      put('H8',dateRu(date));
+      put('J8',s.costCenter||'');
       list.forEach((x,i)=>{
         const r=23+i;
-        setCell(ws,'B'+r,[excelText(x.name),excelText(x.model)].filter(Boolean).join(' — '));
-        setCell(ws,'E'+r,s.location||'Birlik');
-        setCell(ws,'F'+r,excelText(x.serial));
-        setCell(ws,'G'+r,excelText(x.asset));
-        setCell(ws,'H'+r,excelText(x.year));
-        setCell(ws,'I'+r,excelText(x.year));
-        const priceText=excelText(x.price); if(priceText) {const n=Number(priceText.replace(/\s/g,'').replace(',','.')); if(Number.isFinite(n)){setCell(ws,'J'+r,n);ws.getCell('J'+r).numFmt='#,##0.00';}}
+        put('B'+r,[excelText(x.name),excelText(x.model)].filter(Boolean).join(' — '));
+        put('E'+r,s.location||'Birlik');
+        put('F'+r,excelText(x.serial));
+        put('G'+r,excelText(x.asset));
+        put('H'+r,excelText(x.year));
+        put('I'+r,excelText(x.year));
+        const priceText=excelText(x.price);
+        if(priceText){const n=Number(priceText.replace(/\s/g,'').replace(',','.'));if(Number.isFinite(n))put('J'+r,n);}
       });
       const reasons=list.map(x=>excelText(x.cond)).filter(Boolean).join('; ');
-      setCell(ws,'E27',reasons);
-      setCell(ws,'E28',reasons);
-      setCell(ws,'E29','Оборудование подлежит списанию.');
-      // Состав комиссии: сохраняем оформление исходного бланка, меняем только имена.
-      const members=(s.members||EXPERTS.join('\n')).split('\n').map(v=>v.trim()).filter(Boolean);
-      if(s.chair) setCell(ws,'G31',s.chair);
-      if(members[0]) setCell(ws,'G33',members[0]);
-      if(members[1]) setCell(ws,'G35',members[1]);
-      // Подпись находится в A42:C42, поле для номера и даты — справа, в D42:M42.
-      setCell(ws,'D42',[s.docNo?('№ '+excelText(s.docNo)):'',dateRu(date)].filter(Boolean).join(' от '));
+      put('E27',reasons); put('E28',reasons); put('E29','Оборудование подлежит списанию.');
+      // По просьбе: имя председателя (Vijay Norbert) и Internal Auditor пустые.
+      // Выбранный эксперт пишется только напротив IT Specialist.
+      put('G31',''); put('K31','Camp Manager');
+      put('G33','');
+      put('G35',s.expert||EXPERTS[0]);
+      // Поле «Number of document and date» оставляем пустым, включая область значения.
+      put('D42',''); put('E42','');
     } else {
-      const ws=wb.worksheets[0], x=list[0];
-      setCell(ws,'B10',[excelText(x.name),excelText(x.model)].filter(Boolean).join(' — '));
-      setCell(ws,'E10',excelText(x.maker));
-      setCell(ws,'F10',excelText(x.serial));
-      setCell(ws,'G10',excelText(x.year));
-      setCell(ws,'J10',s.location||'Birlik');
-      setCell(ws,'L10',excelText(x.asset));
-      // Не оставляем в бланке пример неисправности от другого оборудования.
+      const x=list[0];
+      put('B10',[excelText(x.name),excelText(x.model)].filter(Boolean).join(' — '));
+      put('E10',excelText(x.maker));
+      put('F10',excelText(x.serial));
+      put('G10',excelText(x.year));
+      put('J10',s.location||'Birlik');
+      put('L10',excelText(x.asset));
       const condition=excelText(x.cond)||'Техническое состояние требует оценки специалистом.';
-      setCell(ws,'B17',condition);
-      setCell(ws,'B23',condition);
-      const priceText=excelText(x.price);
-      setCell(ws,'B29',priceText?'Балансовая стоимость: '+priceText+'. Стоимость ремонта требует оценки.':'Затраты на восстановление требуют оценки.');
-      setCell(ws,'B35','Решение о списании: '+(excelText(x.cond)||'определить по результатам осмотра')+'.');
-      setCell(ws,'D39',s.expert||EXPERTS[0]); setCell(ws,'L39',dateRu(date));
-      const other=EXPERTS.find(n=>n!==(s.expert||EXPERTS[0]));
-      setCell(ws,'D41',other||''); setCell(ws,'L41',dateRu(date));
-      setCell(ws,'D43',s.chair||''); setCell(ws,'L43',dateRu(date));
-      // Не меняем заголовок/макет экспертного заключения — заполняем только предназначенные поля.
+      put('B17',condition);
+      put('B23',condition);
+      put('B29','Затраты на восстановление составляют 60-70% от стоимости оборудования.');
+      put('B35','Ремонт экономически нецелесообразен. Рекомендуется списание.');
+      // Только один выбранный эксперт — первая строка. Вторая и третья строки пустые.
+      put('D39',s.expert||EXPERTS[0]); put('L39',dateRu(date));
+      put('D41',''); put('L41','');
+      put('D43',''); put('L43','');
     }
-    const buffer=await wb.xlsx.writeBuffer();
-    const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    const url=URL.createObjectURL(blob), a=document.createElement('a');
+    await writeTemplateCells(zip,cells);
+    const buffer=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+    const url=URL.createObjectURL(buffer), a=document.createElement('a');
     a.href=url; a.download=(kind==='act'?'Акт-списания-':'Заключение-экспертов-')+fileSafe(s.docNo||date.toISOString().slice(0,10))+'.xlsx';
     document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
-    toast('Excel-документ по исходному шаблону создан ✓');
+    toast('Excel-документ создан по исходному шаблону ✓');
   } catch(e){console.error(e);toast(e.message||'Не удалось сформировать Excel-файл.');}
 }
 $('#mkAct').onclick=()=>makeExcelTemplate('act');
