@@ -6,6 +6,8 @@
 <title>Списание устройств</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <style>
   :root{--bg:#f5f6f8;--card:#fff;--tx:#1b1f24;--mut:#667;--ac:#1a56db;--bd:#d9dde3;--ok:#0a7d3b;--bad:#c0262d}
   @media (prefers-color-scheme:dark){:root{--bg:#14171a;--card:#1d2126;--tx:#e8eaed;--mut:#9aa3ad;--ac:#6ea0ff;--bd:#323941}}
@@ -98,8 +100,8 @@
     <div id="settings"></div>
     <p class="small">Документы создаются для устройств, отмеченных галочкой во вкладке «Список». Сейчас отмечено: <b id="selCnt">0</b>.</p>
     <div class="btns">
-      <button class="btn" id="mkAct">Скачать АКТ (.docx)</button>
-      <button class="btn" id="mkExp">Скачать ЭКСПЕРТНОЕ ЗАКЛЮЧЕНИЕ (.docx)</button>
+      <button class="btn" id="mkAct">Скачать АКТ по шаблону (.xlsx)</button>
+      <button class="btn" id="mkExp">Скачать заключение по шаблону (.xlsx)</button>
     </div>
   </div>
 </section>
@@ -138,7 +140,7 @@
     <div class="btns">
       <button class="btn" id="exp">⬇️ Скачать базу (.json)</button>
       <button class="btn sec" id="impBtn">⬆️ Загрузить базу</button>
-      <button class="btn sec" id="csv">Таблица (.csv)</button>
+      <button class="btn sec" id="csv">Скачать Excel (.xlsx)</button>
       <input type="file" id="imp" accept=".json,application/json" class="hide">
     </div>
     <p class="small" id="size"></p>
@@ -203,15 +205,20 @@ const DEVICE_TYPES = [
   'IP-телефон (SIP)','Телефон стационарный','Смартфон','Мобильный телефон','Планшет',
   'ИБП (UPS)','Коммутатор','Маршрутизатор','Точка доступа Wi-Fi','Сервер','Видеокамера','Web-камера','Гарнитура / наушники'
 ];
+const EXPERTS = ['Sarsen Sundetov','Malik Kalybayev'];
+const COST_CENTERS = ['178600','178500','178200','178400','178420','178000'];
+const todayText = () => new Date().toLocaleDateString('ru-RU');
 const SETTINGS = [
-  {k:'org',    l:'Организация'},
-  {k:'city',   l:'Город'},
-  {k:'docNo',  l:'Номер документа'},
-  {k:'date',   l:'Дата (например 12.10.2026)'},
-  {k:'chair',  l:'Председатель комиссии (должность, ФИО)'},
-  {k:'members',l:'Члены комиссии (каждый с новой строки: должность, ФИО)', area:true},
-  {k:'expert', l:'Эксперт (должность, ФИО)'},
-  {k:'basis',  l:'Основание (приказ №, дата)'}
+  {k:'org',l:'Организация'},
+  {k:'city',l:'Город'},
+  {k:'docNo',l:'Номер документа'},
+  {k:'date',l:'Дата документа'},
+  {k:'costCenter',l:'Центр затрат',type:'cost'},
+  {k:'location',l:'Местонахождение'},
+  {k:'chair',l:'Председатель комиссии (должность, ФИО)'},
+  {k:'members',l:'Члены комиссии (каждый с новой строки)',area:true},
+  {k:'expert',l:'Эксперт',type:'expert'},
+  {k:'basis',l:'Основание (приказ №, дата)'}
 ];
 
 /* ============ ХРАНИЛИЩЕ (отдельное для каждого пользователя) ============ */
@@ -596,9 +603,26 @@ $('#imp').onchange=async e=>{
   }catch(err){toast('Не удалось прочитать файл')}
 };
 $('#csv').onclick=()=>{
-  const head=FIELDS.map(f=>f.l);
-  const rows=items.map(x=>FIELDS.map(f=>'"'+String(x[f.k]||'').replace(/"/g,'""')+'"').join(';'));
-  dl(new Blob(['\ufeff'+[head.map(h=>'"'+h+'"').join(';'),...rows].join('\r\n')],{type:'text/csv'}),'устройства.csv');
+  const headers=FIELDS.map(f=>f.l);
+  const data=[headers,...items.map(x=>FIELDS.map(f=>x[f.k]??''))];
+  if(window.XLSX){
+    const ws=XLSX.utils.aoa_to_sheet(data);
+    ws['!cols']=FIELDS.map(f=>({wch:Math.min(34,Math.max(16,f.l.length+3))}));
+    ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:Math.max(0,data.length-1),c:headers.length-1}})};
+    ws['!freeze']={xSplit:0,ySplit:1};
+    headers.forEach((h,c)=>{const cell=ws[XLSX.utils.encode_cell({r:0,c})];if(cell)cell.s={font:{bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1A56DB'}},alignment:{vertical:'center',wrapText:true}};});
+    items.forEach((x,r)=>['asset','serial'].forEach(k=>{
+      const idx=FIELDS.findIndex(f=>f.k===k),cell=ws[XLSX.utils.encode_cell({r:r+1,c:idx})];
+      if(cell){cell.t='s';cell.v=String(cell.v??'');}
+    }));
+    items.forEach((x,r)=>{const idx=FIELDS.findIndex(f=>f.k==='price'),cell=ws[XLSX.utils.encode_cell({r:r+1,c:idx})];if(cell&&String(cell.v??'').trim()!==''&&Number.isFinite(Number(String(cell.v).replace(',','.')))){cell.t='n';cell.v=Number(String(cell.v).replace(',','.'));cell.z='#,##0.00';}});
+    ws['!rows']=[{hpt:30},...items.map(()=>({hpt:22}))];
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Устройства');
+    XLSX.writeFile(wb,'Инвентаризация-'+new Date().toISOString().slice(0,10)+'.xlsx',{cellStyles:true});
+  }else{
+    const rows=items.map(x=>FIELDS.map(f=>'"'+String(x[f.k]||'').replace(/"/g,'""')+'"').join(';'));
+    dl(new Blob(['\ufeff'+[headers.map(h=>'"'+h+'"').join(';'),...rows].join('\r\n')],{type:'text/csv;charset=utf-8'}),'устройства.csv');
+  }
 };
 $('#wipe').onclick=()=>{
   if(confirm('Очистить список на ЭТОМ устройстве? В Google Таблице данные останутся, их можно вернуть кнопкой «Загрузить из таблицы».')){
@@ -608,8 +632,21 @@ $('#wipe').onclick=()=>{
 
 /* ============ ДОКУМЕНТЫ (WORD) ============ */
 function buildSettings(){
-  $('#settings').innerHTML=SETTINGS.map(s=>`<label>${s.l}</label>`+(s.area?`<textarea rows="3" id="s_${s.k}"></textarea>`:`<input id="s_${s.k}">`)).join('');
-  SETTINGS.forEach(s=>{const el=$('#s_'+s.k);el.value=settings[s.k]||'';el.oninput=()=>{settings[s.k]=el.value;save(ST_KEY,settings)}});
+  $('#settings').innerHTML=SETTINGS.map(s=>{
+    let control;
+    if(s.area) control=`<textarea rows="3" id="s_${s.k}"></textarea>`;
+    else if(s.type==='expert') control=`<select id="s_${s.k}">${EXPERTS.map(v=>`<option value="${v}">${v}</option>`).join('')}</select>`;
+    else if(s.type==='cost') control=`<select id="s_${s.k}"><option value="">— выберите центр затрат —</option>${COST_CENTERS.map(v=>`<option value="${v}">${v}</option>`).join('')}</select>`;
+    else control=`<input id="s_${s.k}" ${s.k==='date'?'placeholder="ДД.ММ.ГГГГ"':''}>`;
+    return `<label>${s.l}</label>${control}`;
+  }).join('');
+  const defaults={date:todayText(),location:'Birlik',expert:EXPERTS[0],members:EXPERTS.join('\n')};
+  SETTINGS.forEach(s=>{
+    const el=$('#s_'+s.k);
+    el.value=settings[s.k]!==undefined?settings[s.k]:(defaults[s.k]||'');
+    el.onchange=el.oninput=()=>{settings[s.k]=el.value;save(ST_KEY,settings)};
+    if(settings[s.k]===undefined){settings[s.k]=el.value;save(ST_KEY,settings)}
+  });
 }
 function selected(){
   const m=new Map();[...items,...allItems].forEach(x=>m.set(K(x),x));
@@ -639,7 +676,8 @@ async function makeDoc(kind){
   const head=[
     P(s.org,{al:A.CENTER,b:true}),
     P(kind==='act'?'АКТ № '+(s.docNo||'___')+' о списании основных средств':'ЭКСПЕРТНОЕ ЗАКЛЮЧЕНИЕ № '+(s.docNo||'___')+' о техническом состоянии оборудования',{al:A.CENTER,b:true,sz:28}),
-    P((s.city||'')+(s.city&&s.date?', ':'')+(s.date||''),{al:A.CENTER,after:240}),
+    P((s.city||'')+(s.city&&s.date?', ':'')+(s.date||todayText()),{al:A.CENTER,after:120}),
+    ...(kind==='act'?[P('Центр затрат: '+(s.costCenter||'________')+'    Местонахождение: '+(s.location||'Birlik'),{after:240})]:[P('Местонахождение: '+(s.location||'Birlik'),{after:240})]),
   ];
   let body=[];
   const rows=list.map((x,i)=>[String(i+1),x.asset,x.name,x.model,x.serial,x.year,x.cond]);
@@ -647,7 +685,7 @@ async function makeDoc(kind){
   const sg=signLines();
   if(kind==='act'){
     body=[
-      P('Комиссия в составе:'+(s.basis?' ('+s.basis+')':'')),
+      P('Комиссия в составе:'+(s.basis?' ('+s.basis+')':'')+' Центр затрат: '+(s.costCenter||'________')+'. Местонахождение: '+(s.location||'Birlik')+'.'),
       P('Председатель: '+(s.chair||'')),
       ...(s.members||'').split('\n').filter(Boolean).map(m=>P('Член комиссии: '+m)),
       P('провела осмотр нижеперечисленного оборудования и установила, что оно непригодно для дальнейшего использования и подлежит списанию:',{after:200}),
@@ -671,8 +709,97 @@ async function makeDoc(kind){
   dl(await D().Packer.toBlob(doc),(kind==='act'?'Акт':'Экспертное-заключение')+'-'+(s.docNo||'без-номера')+'.docx');
   toast('Документ создан ✓');
 }
-$('#mkAct').onclick=()=>makeDoc('act');
-$('#mkExp').onclick=()=>makeDoc('exp');
+/* ============ ЗАПОЛНЕНИЕ ОРИГИНАЛЬНЫХ EXCEL-ШАБЛОНОВ ============
+   Положите оба xlsx-файла рядом с index.html в корне GitHub Pages.
+*/
+const TEMPLATE_ACT='Акт для списания.xlsx';
+const TEMPLATE_EXP='Заключение экспертов.xlsx';
+function dateForExcel(value){
+  if(!value) return new Date();
+  const m=String(value).match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+  if(m) return new Date(Number(m[3]),Number(m[2])-1,Number(m[1]));
+  const d=new Date(value); return Number.isNaN(d.getTime())?new Date():d;
+}
+function dateRu(value){return dateForExcel(value).toLocaleDateString('ru-RU');}
+async function openTemplate(file){
+  if(!window.ExcelJS) throw new Error('Не загрузилась библиотека Excel. Проверьте подключение к интернету.');
+  const response=await fetch(encodeURI(file));
+  if(!response.ok) throw new Error('Не найден файл «'+file+'». Загрузите его в ту же папку GitHub Pages, где находится index.html.');
+  const wb=new ExcelJS.Workbook(); await wb.xlsx.load(await response.arrayBuffer()); return wb;
+}
+function setCell(ws, address, value){
+  if(value===undefined||value===null) return;
+  ws.getCell(address).value=value;
+  ws.getCell(address).alignment={...ws.getCell(address).alignment,vertical:'middle',wrapText:true};
+}
+function appendLabel(ws,address,label,value){
+  const c=ws.getCell(address); const old=String(c.value||label).trim();
+  c.value=old+(value?'  '+value:''); c.alignment={...c.alignment,wrapText:true,vertical:'middle'};
+}
+function fileSafe(s){return String(s||'без-номера').replace(/[\\/:*?"<>|\s]+/g,'-').slice(0,80)}
+async function makeExcelTemplate(kind){
+  try {
+    const list=selected(); if(!list.length)return;
+    if(kind==='exp'&&list.length!==1){toast('Для экспертного заключения выберите ровно одно устройство.');return;}
+    if(kind==='act'&&list.length>3){toast('В шаблоне акта предусмотрено 3 строки. Выберите не более 3 устройств.');return;}
+    const s=settings||{}; const wb=await openTemplate(kind==='act'?TEMPLATE_ACT:TEMPLATE_EXP);
+    // В исходных книгах есть второй лист с демонстрационными данными — в готовый документ его не включаем.
+    wb.worksheets.slice(1).forEach(sh=>wb.removeWorksheet(sh.id));
+    const date=dateForExcel(s.date||todayText());
+    if(kind==='act'){
+      const ws=wb.worksheets[0];
+      appendLabel(ws,'H7','Date',dateRu(date));
+      appendLabel(ws,'J7','Cost center',s.costCenter||'');
+      appendLabel(ws,'K7','Person responsible for the asset',s.chair||'');
+      list.forEach((x,i)=>{
+        const r=23+i;
+        setCell(ws,'B'+r,[x.name,x.model].filter(Boolean).join(' — '));
+        setCell(ws,'E'+r,s.location||'Birlik');
+        setCell(ws,'F'+r,x.serial||'');
+        setCell(ws,'G'+r,x.asset||'');
+        setCell(ws,'H'+r,x.year||'');
+        setCell(ws,'I'+r,x.year||'');
+        if(x.price!==undefined&&x.price!=='') {const n=Number(String(x.price).replace(/\s/g,'').replace(',','.')); if(Number.isFinite(n)){setCell(ws,'J'+r,n);ws.getCell('J'+r).numFmt='#,##0.00';}}
+      });
+      setCell(ws,'E28',list.map(x=>x.cond).filter(Boolean).join('; '));
+      setCell(ws,'E29',list.map(x=>x.cond).filter(Boolean).join('; ')||'Оборудование подлежит списанию.');
+      // Состав комиссии: сохраняем оформление исходного бланка, меняем только имена.
+      const members=(s.members||EXPERTS.join('\n')).split('\n').map(v=>v.trim()).filter(Boolean);
+      if(s.chair) setCell(ws,'G31',s.chair);
+      if(members[0]) setCell(ws,'G33',members[0]);
+      if(members[1]) setCell(ws,'G35',members[1]);
+      appendLabel(ws,'A42','Number of document and date / номер документа и дата',(s.docNo||'')+' '+dateRu(date));
+    } else {
+      const ws=wb.worksheets[0], x=list[0];
+      setCell(ws,'B10',[x.name,x.model].filter(Boolean).join(' — '));
+      setCell(ws,'E10',x.maker||'');
+      setCell(ws,'F10',x.serial||'');
+      setCell(ws,'G10',x.year||'');
+      setCell(ws,'J10',s.location||'Birlik');
+      setCell(ws,'L10',x.asset||'');
+      // Не оставляем в бланке пример неисправности от другого оборудования.
+      const condition=x.cond||'Техническое состояние требует оценки специалистом.';
+      setCell(ws,'B17',condition);
+      setCell(ws,'B23',condition);
+      setCell(ws,'B29',x.price!==undefined&&x.price!==''?'Балансовая стоимость: '+x.price+'. Стоимость ремонта требует оценки.':'Затраты на восстановление требуют оценки.');
+      setCell(ws,'B35','Решение о списании: '+(x.cond||'определить по результатам осмотра')+'.');
+      setCell(ws,'D39',s.expert||EXPERTS[0]); setCell(ws,'L39',dateRu(date));
+      const other=EXPERTS.find(n=>n!==(s.expert||EXPERTS[0]));
+      setCell(ws,'D41',other||''); setCell(ws,'L41',dateRu(date));
+      setCell(ws,'D43',s.chair||''); setCell(ws,'L43',dateRu(date));
+      // Номер документа добавляем в заголовок, не меняя исходную форму.
+      if(s.docNo) setCell(ws,'B6',String(ws.getCell('B6').value||'')+'  № '+s.docNo);
+    }
+    const buffer=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(blob), a=document.createElement('a');
+    a.href=url; a.download=(kind==='act'?'Акт-списания-':'Заключение-экспертов-')+fileSafe(s.docNo||date.toISOString().slice(0,10))+'.xlsx';
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+    toast('Excel-документ по исходному шаблону создан ✓');
+  } catch(e){console.error(e);toast(e.message||'Не удалось сформировать Excel-файл.');}
+}
+$('#mkAct').onclick=()=>makeExcelTemplate('act');
+$('#mkExp').onclick=()=>makeExcelTemplate('exp');
 
 /* ============ СТАРТ ============ */
 (function boot(){
