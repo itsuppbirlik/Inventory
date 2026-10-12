@@ -712,8 +712,8 @@ async function makeDoc(kind){
 /* ============ ЗАПОЛНЕНИЕ ОРИГИНАЛЬНЫХ EXCEL-ШАБЛОНОВ ============
    Положите оба xlsx-файла рядом с index.html в корне GitHub Pages.
 */
-const TEMPLATE_ACT='Акт для списания.xlsx';
-const TEMPLATE_EXP='Заключение экспертов.xlsx';
+const TEMPLATE_ACT='act.xlsx';
+const TEMPLATE_EXP='zakluchenie.xlsx';
 function dateForExcel(value){
   if(!value) return new Date();
   const m=String(value).match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
