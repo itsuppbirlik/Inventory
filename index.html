@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Списание устройств</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<style>
+  :root{--bg:#f5f6f8;--card:#fff;--tx:#1b1f24;--mut:#667;--ac:#1a56db;--bd:#d9dde3;--ok:#0a7d3b;--bad:#c0262d}
+  @media (prefers-color-scheme:dark){:root{--bg:#14171a;--card:#1d2126;--tx:#e8eaed;--mut:#9aa3ad;--ac:#6ea0ff;--bd:#323941}}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:40px}
+  header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--bd);display:flex;gap:6px;padding:8px;overflow-x:auto}
+  header button{flex:1;min-width:90px;padding:10px;border:0;border-radius:8px;background:transparent;color:var(--tx);font-size:15px;cursor:pointer}
+  header button.on{background:var(--ac);color:#fff}
+  main{max-width:720px;margin:0 auto;padding:12px}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+  h2{margin:0 0 10px;font-size:18px}
+  label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+  .row{display:flex;gap:6px}
+  input,select,textarea{width:100%;padding:11px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font-size:16px}
+  .cam{flex:0 0 48px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);font-size:22px;cursor:pointer}
+  button.btn{padding:12px 16px;border:0;border-radius:8px;background:var(--ac);color:#fff;font-size:16px;cursor:pointer}
+  button.sec{background:var(--bg);color:var(--tx);border:1px solid var(--bd)}
+  button.del{background:var(--bad)}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chip{padding:7px 10px;border-radius:16px;background:var(--bg);border:1px solid var(--ac);color:var(--ac);font-size:14px;cursor:pointer}
+  .status{font-size:13px;color:var(--mut);margin-top:6px}
+  .item{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--bd)}
+  .item:first-child{border-top:0}
+  .item input[type=checkbox]{width:22px;height:22px;margin-top:2px}
+  .item .t{flex:1;font-size:14px}
+  .item .t b{font-size:15px}
+  .small{font-size:13px;color:var(--mut)}
+  .hide{display:none}
+  .toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:9;opacity:0;transition:.3s;pointer-events:none}
+  .toast.on{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <button data-tab="add" class="on">➕ Добавить</button>
+  <button data-tab="list">📋 Список (<span id="cnt">0</span>)</button>
+  <button data-tab="docs">📄 Документы</button>
+  <button data-tab="data">💾 Данные</button>
+</header>
+<main>
+
+<!-- ДОБАВИТЬ -->
+<section id="tab-add">
+  <div class="card">
+    <h2 id="formTitle">Новое устройство</h2>
+    <div id="fields"></div>
+    <div class="status" id="ocrStatus"></div>
+    <div class="chips" id="chips"></div>
+    <div class="btns">
+      <button class="btn" id="save">Сохранить</button>
+      <button class="btn sec" id="saveNext">Сохранить и следующее</button>
+      <button class="btn sec" id="clear">Очистить</button>
+    </div>
+  </div>
+</section>
+
+<!-- СПИСОК -->
+<section id="tab-list" class="hide">
+  <div class="card">
+    <input id="q" placeholder="Поиск по номеру, модели, серийному...">
+    <div class="btns">
+      <button class="btn sec" id="selAll">Выбрать все</button>
+      <button class="btn sec" id="selNone">Снять выбор</button>
+    </div>
+    <div id="items"></div>
+  </div>
+</section>
+
+<!-- ДОКУМЕНТЫ -->
+<section id="tab-docs" class="hide">
+  <div class="card">
+    <h2>Реквизиты документов</h2>
+    <div id="settings"></div>
+    <p class="small">Документы создаются для устройств, отмеченных галочкой во вкладке «Список». Сейчас отмечено: <b id="selCnt">0</b>.</p>
+    <div class="btns">
+      <button class="btn" id="mkAct">Скачать АКТ (.docx)</button>
+      <button class="btn" id="mkExp">Скачать ЭКСПЕРТНОЕ ЗАКЛЮЧЕНИЕ (.docx)</button>
+    </div>
+  </div>
+</section>
+
+<!-- ДАННЫЕ -->
+<section id="tab-data" class="hide">
+  <div class="card">
+    <h2>☁️ Google Таблица (автосинхронизация)</h2>
+    <label>Ссылка веб-приложения (заканчивается на /exec)</label>
+    <input id="syUrl" placeholder="https://script.google.com/macros/s/.../exec">
+    <label>Пароль (тот же, что в скрипте)</label>
+    <input id="syTok" type="password" autocomplete="off">
+    <div class="btns">
+      <button class="btn" id="syTest">Проверить</button>
+      <button class="btn sec" id="syPush">Отправить всё в таблицу</button>
+      <button class="btn sec" id="syPull">Загрузить из таблицы</button>
+    </div>
+    <p class="small" id="syState"></p>
+  </div>
+  <div class="card">
+    <h2>Сохранение базы</h2>
+    <p class="small">База хранится в памяти браузера этого телефона/компьютера. Чтобы не потерять — скачайте файл и загрузите на Google Drive. Фото не сохраняются, только текст, поэтому файл очень маленький.</p>
+    <div class="btns">
+      <button class="btn" id="exp">⬇️ Скачать базу (.json)</button>
+      <button class="btn sec" id="impBtn">⬆️ Загрузить базу</button>
+      <button class="btn sec" id="csv">Таблица (.csv)</button>
+      <input type="file" id="imp" accept=".json,application/json" class="hide">
+    </div>
+    <p class="small" id="size"></p>
+    <div class="btns"><button class="btn del" id="wipe">Удалить всё</button></div>
+  </div>
+</section>
+
+</main>
+<div class="toast" id="toast"></div>
+<input type="file" id="photo" accept="image/*" capture="environment" class="hide">
+
+<script>
+/* ============ НАСТРОЙКИ ПОЛЕЙ (можно менять) ============ */
+const FIELDS = [
+  {k:'asset',  l:'Инвентарный (asset) номер', cam:true, pat:'asset'},
+  {k:'name',   l:'Наименование устройства', ph:'Ноутбук, монитор, принтер...'},
+  {k:'model',  l:'Модель', cam:true},
+  {k:'serial', l:'Серийный номер', cam:true, pat:'serial'},
+  {k:'maker',  l:'Производитель', cam:true},
+  {k:'year',   l:'Год выпуска / ввода'},
+  {k:'place',  l:'Местонахождение'},
+  {k:'cond',   l:'Состояние / причина списания', ph:'Не включается, износ, устарел...'},
+  {k:'price',  l:'Балансовая стоимость'}
+];
+const SETTINGS = [
+  {k:'org',    l:'Организация'},
+  {k:'city',   l:'Город'},
+  {k:'docNo',  l:'Номер документа'},
+  {k:'date',   l:'Дата (например 12.10.2026)'},
+  {k:'chair',  l:'Председатель комиссии (должность, ФИО)'},
+  {k:'members',l:'Члены комиссии (каждый с новой строки: должность, ФИО)', area:true},
+  {k:'expert', l:'Эксперт (должность, ФИО)'},
+  {k:'basis',  l:'Основание (приказ №, дата)'}
+];
+
+/* ============ ХРАНИЛИЩЕ ============ */
+const DB_KEY='writeoff_db_v1', ST_KEY='writeoff_settings_v1';
+const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast('Не удалось сохранить в браузере!')}};
+let items=load(DB_KEY,[]), settings=load(ST_KEY,{}), editId=null;
+const sel=new Set();
+
+const $=s=>document.querySelector(s);
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),2200)}
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ============ ВКЛАДКИ ============ */
+document.querySelectorAll('header button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('header button').forEach(x=>x.classList.toggle('on',x===b));
+  ['add','list','docs','data'].forEach(t=>$('#tab-'+t).classList.toggle('hide',t!==b.dataset.tab));
+  if(b.dataset.tab==='list')renderList();
+  if(b.dataset.tab==='docs')$('#selCnt').textContent=sel.size;
+  if(b.dataset.tab==='data')showSize();
+});
+
+/* ============ ФОРМА ============ */
+function buildForm(){
+  $('#fields').innerHTML=FIELDS.map(f=>`
+    <label>${f.l}</label>
+    <div class="row">
+      <input id="f_${f.k}" placeholder="${f.ph||''}" autocomplete="off">
+      ${f.cam?`<button class="cam" type="button" data-cam="${f.k}" title="Сканировать камерой">📷</button>`:''}
+    </div>`).join('');
+  document.querySelectorAll('[data-cam]').forEach(b=>b.onclick=()=>startScan(b.dataset.cam));
+}
+function readForm(){const o={};FIELDS.forEach(f=>o[f.k]=$('#f_'+f.k).value.trim());return o}
+function fillForm(o){FIELDS.forEach(f=>$('#f_'+f.k).value=o?.[f.k]||'')}
+function clearForm(keepPlace){
+  const place=$('#f_place').value, cond=$('#f_cond').value, year=$('#f_year').value;
+  fillForm({}); editId=null; $('#formTitle').textContent='Новое устройство';
+  if(keepPlace){$('#f_place').value=place;$('#f_cond').value=cond;$('#f_year').value=year}
+  $('#chips').innerHTML='';$('#ocrStatus').textContent='';
+}
+function saveItem(next){
+  const o=readForm();
+  if(!o.asset&&!o.serial&&!o.model){toast('Заполните хотя бы номер, серийный или модель');return false}
+  if(editId){const i=items.findIndex(x=>x.id===editId);items[i]={...o,id:editId}}
+  else{
+    if(o.asset&&items.some(x=>x.asset===o.asset)&&!confirm('Устройство с таким номером уже есть. Добавить ещё раз?'))return false;
+    items.push({...o,id:Date.now().toString(36)});
+  }
+  save(DB_KEY,items);updCnt();toast('Сохранено ✓');queueUp(editId||items[items.length-1].id);
+  clearForm(next);window.scrollTo(0,0);return true;
+}
+$('#save').onclick=()=>saveItem(false);
+$('#saveNext').onclick=()=>saveItem(true);
+$('#clear').onclick=()=>clearForm(false);
+
+/* ============ СКАНИРОВАНИЕ (OCR) ============ */
+let scanField=null, worker=null;
+function startScan(k){scanField=k;$('#photo').value='';$('#photo').click()}
+async function downscale(file,max=1600){
+  const bmp=await createImageBitmap(file);
+  const r=Math.min(1,max/Math.max(bmp.width,bmp.height));
+  const c=document.createElement('canvas');c.width=Math.round(bmp.width*r);c.height=Math.round(bmp.height*r);
+  const x=c.getContext('2d');x.filter='grayscale(1) contrast(1.4)';x.drawImage(bmp,0,0,c.width,c.height);
+  return c;
+}
+$('#photo').onchange=async e=>{
+  const file=e.target.files[0];if(!file)return;
+  const st=$('#ocrStatus');$('#chips').innerHTML='';
+  try{
+    st.textContent='Подготовка фото...';
+    const canvas=await downscale(file);
+    if(!worker){
+      st.textContent='Загрузка распознавания (первый раз ~10 сек)...';
+      worker=await Tesseract.createWorker('eng+rus',1,{logger:m=>{if(m.status==='recognizing text')st.textContent='Распознаю: '+Math.round(m.progress*100)+'%'}});
+    }
+    const {data}=await worker.recognize(canvas);
+    canvas.width=canvas.height=1; // фото не сохраняем
+    showCandidates(data.text);
+  }catch(err){st.textContent='Ошибка распознавания: '+err.message+'. Нужен интернет при первом запуске.'}
+};
+function showCandidates(text){
+  const f=FIELDS.find(x=>x.k===scanField);
+  const lines=text.split(/\n+/).map(s=>s.trim()).filter(s=>s.length>1);
+  let tokens=[];
+  lines.forEach(l=>{
+    // часть после двоеточия (S/N: ABC123)
+    const m=l.match(/[:#№]\s*([A-Za-z0-9\-\/._ ]{3,})$/);
+    if(m)tokens.push(m[1].trim());
+    tokens.push(l);
+    l.split(/\s+/).forEach(w=>{if(w.length>=4)tokens.push(w.replace(/^[^\w]+|[^\w]+$/g,''))});
+  });
+  tokens=[...new Set(tokens.filter(t=>t.length>=3))];
+  if(f.pat){ // сначала то, что похоже на номер: буквы+цифры/цифры
+    const score=t=>(/\d/.test(t)?2:0)+(/^[A-Za-z0-9\-\/._]+$/.test(t)?2:0)+(t.length>=5&&t.length<=24?1:0);
+    tokens.sort((a,b)=>score(b)-score(a));
+  }
+  tokens=tokens.slice(0,18);
+  const st=$('#ocrStatus');
+  if(!tokens.length){st.textContent='Текст не найден. Сфотографируйте ближе и при хорошем свете.';return}
+  st.textContent='Нажмите на нужный вариант — он вставится в поле «'+f.l+'»:';
+  $('#chips').innerHTML=tokens.map(t=>`<span class="chip">${esc(t)}</span>`).join('');
+  document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{
+    const el=$('#f_'+scanField);el.value=c.textContent.toUpperCase()===c.textContent||f.pat?c.textContent:c.textContent;
+    toast('Вставлено ✓');
+  });
+  // первый вариант вставляем автоматически, если поле пустое
+  const el=$('#f_'+scanField);if(!el.value&&f.pat)el.value=tokens[0];
+}
+
+/* ============ СПИСОК ============ */
+function updCnt(){$('#cnt').textContent=items.length}
+function renderList(){
+  const q=$('#q').value.toLowerCase();
+  const arr=items.filter(x=>!q||Object.values(x).join(' ').toLowerCase().includes(q));
+  $('#items').innerHTML=arr.length?arr.map(x=>`
+    <div class="item">
+      <input type="checkbox" data-sel="${x.id}" ${sel.has(x.id)?'checked':''}>
+      <div class="t"><b>${esc(x.asset||'—')}</b> · ${esc(x.name)}<br>
+        <span class="small">${esc(x.model)} · S/N ${esc(x.serial)}</span></div>
+      <button class="btn sec" data-edit="${x.id}">✏️</button>
+      <button class="btn sec" data-del="${x.id}">🗑</button>
+    </div>`).join(''):'<p class="small">Пока пусто.</p>';
+  document.querySelectorAll('[data-sel]').forEach(c=>c.onchange=()=>{c.checked?sel.add(c.dataset.sel):sel.delete(c.dataset.sel)});
+  document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{
+    const o=items.find(x=>x.id===b.dataset.edit);fillForm(o);editId=o.id;
+    $('#formTitle').textContent='Редактирование';document.querySelector('[data-tab=add]').click();
+  });
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    if(!confirm('Удалить устройство?'))return;
+    items=items.filter(x=>x.id!==b.dataset.del);sel.delete(b.dataset.del);save(DB_KEY,items);updCnt();renderList();queueRm(b.dataset.del);
+  });
+}
+$('#q').oninput=renderList;
+$('#selAll').onclick=()=>{items.forEach(x=>sel.add(x.id));renderList()};
+$('#selNone').onclick=()=>{sel.clear();renderList()};
+
+/* ============ ДАННЫЕ ============ */
+function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000)}
+function showSize(){const n=new Blob([JSON.stringify(items)]).size;$('#size').textContent=`Устройств: ${items.length}. Размер базы: ${(n/1024).toFixed(1)} КБ.`}
+$('#exp').onclick=()=>dl(new Blob([JSON.stringify({items,settings},null,0)],{type:'application/json'}),'база-списание-'+new Date().toISOString().slice(0,10)+'.json');
+$('#impBtn').onclick=()=>$('#imp').click();
+$('#imp').onchange=async e=>{
+  try{
+    const d=JSON.parse(await e.target.files[0].text());
+    const inc=Array.isArray(d)?d:d.items;
+    const have=new Set(items.map(x=>x.id));
+    inc.forEach(x=>{if(!have.has(x.id))items.push(x)});
+    if(d.settings)settings={...d.settings,...settings};
+    save(DB_KEY,items);save(ST_KEY,settings);updCnt();buildSettings();showSize();toast('База загружена ✓');
+  }catch(err){toast('Не удалось прочитать файл')}
+};
+$('#csv').onclick=()=>{
+  const head=FIELDS.map(f=>f.l);
+  const rows=items.map(x=>FIELDS.map(f=>'"'+String(x[f.k]||'').replace(/"/g,'""')+'"').join(';'));
+  dl(new Blob(['\ufeff'+[head.map(h=>'"'+h+'"').join(';'),...rows].join('\r\n')],{type:'text/csv'}),'устройства.csv');
+};
+$('#wipe').onclick=()=>{if(confirm('Удалить ВСЕ устройства? Сначала скачайте базу!')&&confirm('Точно удалить?')){items=[];sel.clear();save(DB_KEY,items);updCnt();showSize()}};
+
+/* ============ ДОКУМЕНТЫ (WORD) ============ */
+function buildSettings(){
+  $('#settings').innerHTML=SETTINGS.map(s=>`<label>${s.l}</label>`+(s.area?`<textarea rows="3" id="s_${s.k}"></textarea>`:`<input id="s_${s.k}">`)).join('');
+  SETTINGS.forEach(s=>{const el=$('#s_'+s.k);el.value=settings[s.k]||'';el.oninput=()=>{settings[s.k]=el.value;save(ST_KEY,settings)}});
+}
+function selected(){const a=items.filter(x=>sel.has(x.id));if(!a.length)toast('Отметьте устройства во вкладке «Список»');return a}
+
+const D=()=>window.docx;
+const P=(text,o={})=>new (D().Paragraph)({alignment:o.al,spacing:{after:o.after??120},children:[new (D().TextRun)({text:text||'',bold:o.b,size:o.sz||24,font:'Times New Roman'})]});
+function cell(t,w,b){return new (D().TableCell)({width:{size:w,type:D().WidthType.PERCENTAGE},children:[P(t,{sz:20,b,after:0})]})}
+function table(cols,rows){
+  const W=cols.map(c=>c[1]);
+  return new (D().Table)({width:{size:100,type:D().WidthType.PERCENTAGE},rows:[
+    new (D().TableRow)({tableHeader:true,children:cols.map(c=>cell(c[0],c[1],true))}),
+    ...rows.map(r=>new (D().TableRow)({children:r.map((v,i)=>cell(v,W[i]))}))
+  ]});
+}
+function signLines(){
+  const out=[P('',{after:240})];
+  const add=(role,name)=>out.push(P((role||'')+' ______________ / '+(name||'')+' /',{after:200}));
+  const split=s=>{const m=(s||'').split(',');return [m[0]?.trim(),m.slice(1).join(',').trim()]};
+  return {out,add,split};
+}
+async function makeDoc(kind){
+  const list=selected();if(!list.length)return;
+  if(!D()){toast('Библиотека Word не загрузилась — нужен интернет');return}
+  const s=settings, A=D().AlignmentType;
+  const head=[
+    P(s.org,{al:A.CENTER,b:true}),
+    P(kind==='act'?'АКТ № '+(s.docNo||'___')+' о списании основных средств':'ЭКСПЕРТНОЕ ЗАКЛЮЧЕНИЕ № '+(s.docNo||'___')+' о техническом состоянии оборудования',{al:A.CENTER,b:true,sz:28}),
+    P((s.city||'')+(s.city&&s.date?', ':'')+(s.date||''),{al:A.CENTER,after:240}),
+  ];
+  let body=[];
+  const rows=list.map((x,i)=>[String(i+1),x.asset,x.name,x.model,x.serial,x.year,x.cond]);
+  const cols=[['№',5],['Инв. номер',15],['Наименование',17],['Модель',17],['Серийный номер',17],['Год',8],['Состояние / причина',21]];
+  const sg=signLines();
+  if(kind==='act'){
+    body=[
+      P('Комиссия в составе:'+(s.basis?' ('+s.basis+')':'')),
+      P('Председатель: '+(s.chair||'')),
+      ...(s.members||'').split('\n').filter(Boolean).map(m=>P('Член комиссии: '+m)),
+      P('провела осмотр нижеперечисленного оборудования и установила, что оно непригодно для дальнейшего использования и подлежит списанию:',{after:200}),
+      table(cols,rows),
+      P('',{after:120}),
+      P('Всего к списанию: '+list.length+' ед.',{b:true}),
+    ];
+    sg.add('Председатель комиссии',sg.split(s.chair)[1]);
+    (s.members||'').split('\n').filter(Boolean).forEach(m=>{const [r,n]=sg.split(m);sg.add(r,n)});
+  }else{
+    body=[
+      P('Эксперт: '+(s.expert||'')+(s.basis?' ('+s.basis+')':'')),
+      P('Мною проведена техническая экспертиза следующего оборудования:',{after:200}),
+      table(cols,rows),
+      P('',{after:120}),
+      P('Заключение: по результатам осмотра установлено, что указанное оборудование (всего '+list.length+' ед.) имеет неисправности / физический и моральный износ, восстановление нецелесообразно, оборудование подлежит списанию.'),
+    ];
+    const [r,n]=sg.split(s.expert);sg.add(r||'Эксперт',n);
+  }
+  const doc=new (D().Document)({sections:[{properties:{page:{size:{orientation:D().PageOrientation.LANDSCAPE},margin:{top:800,bottom:800,left:900,right:900}}},children:[...head,...body,...sg.out]}]});
+  dl(await D().Packer.toBlob(doc),(kind==='act'?'Акт':'Экспертное-заключение')+'-'+(s.docNo||'без-номера')+'.docx');
+  toast('Документ создан ✓');
+}
+$('#mkAct').onclick=()=>makeDoc('act');
+$('#mkExp').onclick=()=>makeDoc('exp');
+
+/* ============ СИНХРОНИЗАЦИЯ С GOOGLE ТАБЛИЦЕЙ ============ */
+const SY_KEY='writeoff_sync_v1';
+let sync=load(SY_KEY,{url:'',token:'',up:[],rm:[]});
+const sysave=()=>save(SY_KEY,sync);
+const syMsg=t=>{$('#syState').textContent=t};
+function queueUp(id){if(!sync.url)return;sync.rm=sync.rm.filter(x=>x!==id);if(!sync.up.includes(id))sync.up.push(id);sysave();flush()}
+function queueRm(id){if(!sync.url)return;sync.up=sync.up.filter(x=>x!==id);if(!sync.rm.includes(id))sync.rm.push(id);sysave();flush()}
+let flushing=false;
+async function post(body){
+  const r=await fetch(sync.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:sync.token,...body})});
+  const j=await r.json();if(j.error)throw new Error(j.error==='token'?'неверный пароль':j.error);return j;
+}
+async function flush(){
+  if(!sync.url||flushing||(!sync.up.length&&!sync.rm.length))return;
+  flushing=true;
+  try{
+    const up=sync.up.map(id=>items.find(x=>x.id===id)).filter(Boolean), rm=[...sync.rm];
+    const sent=[...sync.up];
+    await post({upsert:up,remove:rm});
+    sync.up=sync.up.filter(id=>!sent.includes(id));sync.rm=sync.rm.filter(id=>!rm.includes(id));sysave();
+    syMsg('Синхронизировано ✓ '+new Date().toLocaleTimeString());
+  }catch(e){syMsg('Не отправлено ('+e.message+'). Повторится автоматически, когда появится интернет.')}
+  flushing=false;
+}
+$('#syUrl').value=sync.url||'';$('#syTok').value=sync.token||'';
+['syUrl','syTok'].forEach(id=>$('#'+id).onchange=()=>{sync.url=$('#syUrl').value.trim();sync.token=$('#syTok').value.trim();sysave()});
+$('#syTest').onclick=async()=>{
+  sync.url=$('#syUrl').value.trim();sync.token=$('#syTok').value.trim();sysave();
+  try{syMsg('Проверяю...');const r=await fetch(sync.url+'?token='+encodeURIComponent(sync.token));const j=await r.json();
+    syMsg(j.error?'Ошибка: неверный пароль':'Подключено ✓ Устройств в таблице: '+j.items.length)}
+  catch(e){syMsg('Не удалось подключиться. Проверьте ссылку и что доступ «Все».')}
+};
+$('#syPush').onclick=()=>{sync.up=items.map(x=>x.id);sync.rm=[];sysave();syMsg('Отправляю...');flush()};
+$('#syPull').onclick=async()=>{
+  try{
+    syMsg('Загружаю...');
+    const r=await fetch(sync.url+'?token='+encodeURIComponent(sync.token));const j=await r.json();
+    if(j.error)throw new Error('неверный пароль');
+    const map=new Map(items.map(x=>[x.id,x]));
+    j.items.forEach(x=>map.set(String(x.id),x));
+    items=[...map.values()];save(DB_KEY,items);updCnt();showSize();
+    syMsg('Загружено ✓ Всего устройств: '+items.length);
+  }catch(e){syMsg('Ошибка загрузки: '+e.message)}
+};
+window.addEventListener('online',flush);
+setTimeout(flush,1500);
+
+/* ============ СТАРТ ============ */
+buildForm();buildSettings();updCnt();
+if('serviceWorker' in navigator&&location.protocol.startsWith('http')){/* офлайн-режим можно добавить позже */}
+</script>
+</body>
+</html>
