@@ -76,6 +76,17 @@
   .cropctl input{padding:0;margin-top:4px}
   #cropPrev{max-width:100%;border-radius:6px;background:#fff;margin:4px 0}
   .chip.code{border-style:dashed;font-weight:600}
+  .pick{display:block;width:100%;padding:11px 36px 11px 11px;border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:16px;font-family:inherit;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-appearance:none;appearance:none;
+    background:var(--bg) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23888' stroke-width='2'/></svg>") no-repeat right 12px center}
+  #s_members{margin-top:6px;max-height:240px;overflow:auto}
+  input[type=date]{min-height:44px;-webkit-appearance:none;appearance:none}
+  .mini{display:flex;gap:6px;align-items:center;margin:10px 0 0}
+  body.admin .mini.adm{display:flex}
+  .mini button{padding:4px 10px;font-size:13px;border:1px solid var(--bd);border-radius:14px;background:var(--bg);color:var(--ac);cursor:pointer}
+  .badge{display:inline-block;padding:1px 9px;border-radius:10px;font-size:12px;font-weight:600;color:#fff;background:var(--bad);vertical-align:middle}
+  .badge.on{background:#1aa34a}
+  /* на узком экране вкладки переносятся на 2 строки — все видны сразу, без прокрутки вбок */
+  @media(max-width:700px){header{flex-wrap:wrap;overflow-x:visible}header button{flex:1 1 30%;min-width:0;white-space:normal}}
 </style>
 </head>
 <body>
@@ -487,7 +498,7 @@ document.querySelectorAll('header button').forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==='list')renderList();
   if(b.dataset.tab==='docs'){
     $('#selCnt').textContent=sel.size;
-    if(!docDateTouched&&$('#s_date'))$('#s_date').value=todayText();   // дата всегда актуальная
+    if(!docDateTouched&&$('#s_date'))$('#s_date').value=todayISO();   // дата всегда актуальная
     if(sess)loadDict(true);
   }
   if(b.dataset.tab==='users'){renderUsers();usersTimer=setInterval(()=>{if(!document.hidden)renderUsers(true)},30000)}
@@ -498,7 +509,7 @@ document.querySelectorAll('header button').forEach(b=>b.onclick=()=>{
 function buildForm(){
   $('#fields').innerHTML=FIELDS.map(f=>`
     <label>${f.l}</label>
-    ${f.opts?`<select id="t_${f.k}" style="margin-bottom:6px"><option value="">— выберите из списка —</option>${deviceTypes().map(t=>`<option>${esc(t)}</option>`).join('')}<option value="__other">Другое (ввести вручную)</option></select>${sess&&sess.role==='admin'?`<div class="btns"><button type="button" class="btn sec" id="addDeviceType">＋ Добавить тип</button><button type="button" class="btn sec" id="removeDeviceType">− Удалить тип</button></div>`:''}`:''}
+    ${f.opts?`<select class="pick" id="t_${f.k}" style="margin-bottom:6px"><option value="">— выберите из списка —</option>${deviceTypes().map(t=>`<option>${esc(t)}</option>`).join('')}<option value="__other">Другое (ввести вручную)</option></select>${sess&&sess.role==='admin'?`<div class="mini adm"><span class="small">Список типов:</span><button type="button" id="addDeviceType">＋ добавить</button><button type="button" id="removeDeviceType">− удалить</button></div>`:''}`:''}
     <div class="row">
       <input id="f_${f.k}" placeholder="${f.ph||''}" autocomplete="off">
       ${f.cam?`<button class="cam" type="button" data-cam="${f.k}" title="Сканировать камерой">📷</button>`:''}
@@ -820,8 +831,8 @@ async function renderUsers(silent){
     const j=await api(sess,'users.list');
     box.innerHTML=j.users.map(u=>`
       <div class="item"><div class="t">
-        <span class="dot ${u.online?'on':'off'}" title="${u.online?'онлайн':'офлайн'}"></span><b>${esc(u.login)}</b>${u.main?' · главный администратор':''}<br>
-        <span class="small">${u.online?'онлайн':'офлайн'} · ${esc(agoText(u.lastSeen,j.now))} · ${DEV_ICON[u.device]||'❔'} ${esc(DEV_NAME[u.device]||'устройство неизвестно')} · записей: ${u.count}</span>
+        <b>${esc(u.login)}</b>${u.main?' · главный администратор':''} <span class="badge ${u.online?'on':'off'}">${u.online?'онлайн':'офлайн'}</span><br>
+        <span class="small">${esc(agoText(u.lastSeen,j.now))} · ${DEV_ICON[u.device]||'❔'} ${esc(DEV_NAME[u.device]||'устройство неизвестно')} · записей: ${u.count}</span>
         ${u.main?'<br><span class="small">Роль: Администратор</span>':`<br><select class="rolesel" data-role="${esc(u.login)}"><option value="user" ${u.role==='user'?'selected':''}>Обычный пользователь</option><option value="admin" ${u.role==='admin'?'selected':''}>Администратор</option></select>`}
       </div>
       ${u.main?'':`<button class="btn sec" data-pw="${esc(u.login)}" title="Сменить пароль">🔑</button><button class="btn sec" data-ud="${esc(u.login)}" title="Удалить">🗑</button>`}
@@ -920,6 +931,7 @@ $('#wipe').onclick=()=>{
 const TEMPLATE_ACT='act.xlsx';
 const TEMPLATE_EXP='zakluchenie.xlsx';
 const DEFAULT_CHAIR_POSITION='Camp Manager';   // если у председателя в справочнике не указана должность
+const todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const XLSX_MIME='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 let docDate='',docDateTouched=false;
@@ -933,26 +945,30 @@ function buildSettings(){
   if(settings.location===undefined)settings.location='Birlik';
   save(ST_KEY,settings);
   const label=n=>esc(n)+(posOf(n)?' — '+esc(posOf(n)):'');
-  const person=(k,ph)=>`<select id="s_${k}"><option value="">${ph}</option>${names.map(n=>`<option value="${esc(n)}">${label(n)}</option>`).join('')}</select>`;
+  const person=(k,ph)=>`<select class="pick" id="s_${k}"><option value="">${ph}</option>${names.map(n=>`<option value="${esc(n)}">${label(n)}</option>`).join('')}</select>`;
+  const memText=()=>{const v=splitList(settings.members);return v.length?v.join(', '):'— выберите членов комиссии —'};
   $('#settings').innerHTML=`
     <label>Номер документа</label><input id="s_docNo" autocomplete="off">
-    <label>Дата документа</label><input id="s_date" placeholder="ДД.ММ.ГГГГ" autocomplete="off">
-    <label>Центр затрат</label><select id="s_costCenter"><option value="">— выберите центр затрат —</option>${COST_CENTERS.map(v=>`<option value="${v}">${v}</option>`).join('')}</select>
+    <label>Дата документа</label><input type="date" id="s_date">
+    <label>Центр затрат</label><select class="pick" id="s_costCenter"><option value="">— выберите центр затрат —</option>${COST_CENTERS.map(v=>`<option value="${v}">${v}</option>`).join('')}</select>
     <label>Местонахождение</label><input id="s_location" autocomplete="off">
+    <div class="mini adm"><span class="small">Список людей:</span><button type="button" id="addPerson" title="Добавить человека в общий список">＋ добавить</button><button type="button" id="removePerson" title="Удалить человека из общего списка">− удалить</button></div>
     <label>Председатель комиссии</label>${person('chair','— выберите человека —')}
-    <label>Члены комиссии (можно выбрать несколько)</label>
-    <div class="checks" id="s_members">${names.length?names.map(n=>`<label><input type="checkbox" value="${esc(n)}" ${mem.includes(n)?'checked':''}><span>${label(n)}</span></label>`).join(''):'<p class="small">Справочник людей пуст.</p>'}</div>
+    <label>Члены комиссии</label>
+    <button type="button" class="pick" id="memBtn">${esc(memText())}</button>
+    <div class="checks hide" id="s_members">${names.length?names.map(n=>`<label><input type="checkbox" value="${esc(n)}" ${mem.includes(n)?'checked':''}><span>${label(n)}</span></label>`).join(''):'<p class="small">Справочник людей пуст.</p>'}</div>
     <label>Эксперт</label>${person('expert','— выберите эксперта —')}
-    <label>Ответственное лицо за актив (необязательно)</label>${person('responsible','— не указывать —')}
-    <div class="btns adm"><button type="button" class="btn sec" id="addPerson">＋ Добавить человека</button><button type="button" class="btn sec" id="removePerson">− Удалить из списка…</button></div>`;
+    <label>Ответственное лицо за актив (необязательно)</label>${person('responsible','— не указывать —')}`;
   ['docNo','costCenter','location','chair','expert','responsible'].forEach(k=>{
     const el=$('#s_'+k);el.value=settings[k]||'';
     el.oninput=el.onchange=()=>{settings[k]=el.value;save(ST_KEY,settings)};
   });
-  const d=$('#s_date');d.value=docDate||todayText();
-  d.oninput=()=>{docDate=d.value;docDateTouched=true};
+  const d=$('#s_date');d.value=docDate||todayISO();
+  d.oninput=d.onchange=()=>{docDate=d.value;docDateTouched=true};
+  $('#memBtn').onclick=()=>$('#s_members').classList.toggle('hide');
   $('#s_members').querySelectorAll('input').forEach(cb=>cb.onchange=()=>{
     settings.members=[...$('#s_members').querySelectorAll('input:checked')].map(i=>i.value).join('\n');save(ST_KEY,settings);
+    $('#memBtn').textContent=memText();
   });
   $('#addPerson').onclick=()=>dictAdd('people');
   $('#removePerson').onclick=()=>openDictModal('people');
@@ -964,7 +980,7 @@ function selected(){
 }
 function currentDocSettings(){
   const dEl=$('#s_date');
-  return {date:(dEl&&dEl.value.trim())||todayText(),docNo:(settings.docNo||'').trim(),costCenter:settings.costCenter||'',
+  return {date:(dEl&&dEl.value.trim())||todayISO(),docNo:(settings.docNo||'').trim(),costCenter:settings.costCenter||'',
     location:(settings.location||'').trim()||'Birlik',chair:settings.chair||'',members:splitList(settings.members),
     expert:settings.expert||'',responsible:settings.responsible||''};
 }
@@ -975,6 +991,8 @@ const colLetter=n=>{let s='';while(n>0){const m=(n-1)%26;s=String.fromCharCode(6
 function dateForExcel(value){
   if(!value) return new Date();
   if(value instanceof Date) return value;
+  const iso=String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(iso) return new Date(Number(iso[1]),Number(iso[2])-1,Number(iso[3]));
   const m=String(value).match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
   if(m) return new Date(Number(m[3]),Number(m[2])-1,Number(m[1]));
   const d=new Date(value); return Number.isNaN(d.getTime())?new Date():d;
