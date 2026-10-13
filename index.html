@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Списание устройств</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
   :root{--bg:#f5f6f8;--card:#fff;--tx:#1b1f24;--mut:#667;--ac:#1a56db;--bd:#d9dde3;--ok:#0a7d3b;--bad:#c0262d}
@@ -63,6 +62,20 @@
     .item button{min-width:40px;min-height:40px;padding:8px}
     .btns{gap:8px}
   }
+  /* Новое: индикатор онлайн, чек-листы, редактор рамки */
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;background:var(--bad)}
+  .dot.on{background:#1aa34a}
+  .checks{border:1px solid var(--bd);border-radius:8px;padding:4px 10px;background:var(--bg)}
+  .checks label{display:flex;gap:10px;align-items:center;margin:2px 0;padding:8px 0;color:var(--tx);font-size:15px}
+  .checks input{width:22px;height:22px;flex:0 0 22px}
+  .rolesel{margin-top:6px;padding:8px;font-size:14px}
+  #dictModal{z-index:35;justify-content:center}
+  #dictModal .card{width:100%;max-width:520px;color:var(--tx);max-height:90vh;overflow:auto}
+  .cropctl{width:100%;max-width:720px;display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+  .cropctl label{flex:1;min-width:140px;color:#ddd;margin:0}
+  .cropctl input{padding:0;margin-top:4px}
+  #cropPrev{max-width:100%;border-radius:6px;background:#fff;margin:4px 0}
+  .chip.code{border-style:dashed;font-weight:600}
 </style>
 </head>
 <body>
@@ -111,7 +124,7 @@
   <div class="card">
     <h2>Реквизиты документов</h2>
     <div id="settings"></div>
-    <p class="small">Документы создаются для устройств, отмеченных галочкой во вкладке «Список». Сейчас отмечено: <b id="selCnt">0</b>.</p>
+    <p class="small">Документы создаются для устройств, отмеченных галочкой во вкладке «Список». Сейчас отмечено: <b id="selCnt">0</b>. Акт — одним файлом на все устройства (строки добавляются сами). Заключение — по одному файлу на устройство (если выбрано несколько, они придут одним архивом .zip).</p>
     <div class="btns">
       <button class="btn" id="mkAct">Скачать АКТ по шаблону (.xlsx)</button>
       <button class="btn" id="mkExp">Скачать заключение по шаблону (.xlsx)</button>
@@ -132,6 +145,14 @@
   <div class="card">
     <h2>Пользователи</h2>
     <div id="usersList"><p class="small">Загрузка...</p></div>
+  </div>
+  <div class="card">
+    <h2>Общие справочники</h2>
+    <p class="small">Одинаковы на всех устройствах. Менять может только администратор (права проверяет сервер).</p>
+    <div class="btns">
+      <button class="btn sec" id="dictPeople">👤 Люди: председатель, члены, эксперт</button>
+      <button class="btn sec" id="dictTypes">🖥 Типы устройств</button>
+    </div>
   </div>
 </section>
 
@@ -182,14 +203,28 @@
 
 <!-- ОБРЕЗКА ФОТО -->
 <div class="modal" id="cropModal">
-  <p style="margin:6px 0;text-align:center;font-size:15px">Обведите пальцем только нужную строку (номер, серийник)</p>
+  <p style="margin:6px 0;text-align:center;font-size:15px">Выделите нужную строку (номер, серийник, штрихкод). Рамку можно двигать и тянуть за углы и стороны.</p>
   <canvas id="cropCv"></canvas>
+  <div class="cropctl">
+    <label>Ширина рамки<input type="range" id="cropW" min="24" max="720" value="200"></label>
+    <label>Высота рамки<input type="range" id="cropH" min="24" max="720" value="80"></label>
+  </div>
+  <p style="margin:8px 0 2px;font-size:13px;color:#bbb">Предпросмотр — так видит распознавание:</p>
+  <canvas id="cropPrev" class="hide"></canvas>
   <label class="chk"><input type="checkbox" id="bw"> Чёрно-белый режим (если не читает)</label>
   <p id="cropSt" style="margin:6px 0;font-size:14px;color:#9cf;text-align:center"></p>
   <div class="btns">
     <button class="btn" id="cropGo">Распознать</button>
     <button class="btn sec" id="cropAll">Всё фото</button>
     <button class="btn sec" id="cropCancel">Отмена</button>
+  </div>
+</div>
+<!-- СПРАВОЧНИКИ (админ) -->
+<div class="modal" id="dictModal">
+  <div class="card">
+    <h2 id="dictTitle"></h2>
+    <div id="dictList"></div>
+    <div class="btns"><button class="btn" id="dictAddBtn">＋ Добавить</button><button class="btn sec" id="dictClose">Закрыть</button></div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -221,18 +256,6 @@ const DEVICE_TYPES = [
 const EXPERTS = ['Sarsen Sundetov','Malik Kalybayev'];
 const COST_CENTERS = ['178600','178500','178200','178400','178420','178000'];
 const todayText = () => new Date().toLocaleDateString('ru-RU');
-const SETTINGS = [
-  {k:'org',l:'Организация'},
-  {k:'city',l:'Город'},
-  {k:'docNo',l:'Номер документа'},
-  {k:'date',l:'Дата документа'},
-  {k:'costCenter',l:'Центр затрат',type:'cost'},
-  {k:'location',l:'Местонахождение'},
-  {k:'chair',l:'Председатель комиссии',type:'chair'},
-  {k:'members',l:'Члены комиссии',type:'members'},
-  {k:'expert',l:'Эксперт',type:'expert'},
-  {k:'basis',l:'Основание (приказ №, дата)'}
-];
 
 /* ============ ХРАНИЛИЩЕ (отдельное для каждого пользователя) ============ */
 const SESS_KEY='writeoff_session_v2';
@@ -241,6 +264,8 @@ const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){re
 const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast('Не удалось сохранить в браузере!')}};
 let items=[], settings={}, editId=null, sess=null, allItems=[], allMode=false, sync={up:[],rm:[]};
 const sel=new Set();
+const DICT_KEY='writeoff_dict_v1';
+let dict={people:[],types:[]};
 const K=x=>(x.owner||(sess&&sess.login)||'')+'|'+x.id;
 
 const $=s=>document.querySelector(s);
@@ -248,11 +273,21 @@ function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');setT
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ============ СЕРВЕР ============ */
-const ERR={auth:'неверный логин или пароль',locked:'слишком много попыток, подождите 10 минут'};
+const ERR={auth:'неверный логин или пароль',locked:'слишком много попыток, подождите 10 минут',
+  unknown:'скрипт Google на сервере устарел — обновите Code.gs и сделайте «Новая версия» развёртывания',bad:'некорректный запрос'};
+// Приблизительное определение типа устройства (для раздела «Пользователи»)
+function deviceKind(){
+  const ua=navigator.userAgent||'', touch=(navigator.maxTouchPoints||0)>1;
+  if(/iPad/.test(ua)||(/Macintosh/.test(ua)&&touch))return 'tablet';
+  if(/Android/.test(ua))return /Mobile/.test(ua)?'phone':'tablet';
+  if(/iPhone|iPod|Mobi/.test(ua))return 'phone';
+  return 'desktop';
+}
 async function api(s,action,body={}){
   const r=await fetch(s.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify({action,login:s.login,pass:s.pass,...body})});
-  const j=await r.json();
+    body:JSON.stringify({action,login:s.login,pass:s.pass,device:deviceKind(),...body})});
+  let j;
+  try{j=await r.json()}catch(e){throw new Error('Сервер вернул не данные. Проверьте ссылку /exec и что доступ веб-приложения «Все».')}
   if(j.error){const e=new Error(ERR[j.error]||j.error);e.code=j.error;throw e}
   return j;
 }
@@ -280,6 +315,7 @@ $('#lgGo').onclick=async()=>{
 $('#lgPass').onkeydown=e=>{if(e.key==='Enter')$('#lgGo').click()};
 function logout(msg){
   try{localStorage.removeItem(SESS_KEY)}catch(e){}
+  if(hb){clearInterval(hb);hb=null}
   sess=null;items=[];allItems=[];sel.clear();
   document.body.classList.remove('admin');
   document.querySelector('[data-tab=add]').click();
@@ -287,6 +323,11 @@ function logout(msg){
 }
 $('#logout').onclick=()=>{if(confirm('Выйти? Несинхронизированные изменения останутся на устройстве.'))logout()};
 
+let hb=null;
+function applyRole(){
+  document.body.classList.toggle('admin',sess.role==='admin');
+  $('#who').innerHTML='Вы вошли как <b>'+esc(sess.login)+'</b> ('+(sess.role==='admin'?'администратор':'обычный пользователь')+')';
+}
 function startApp(){
   const k=sess.login.replace(/[^a-z0-9._-]/g,'_');
   DB_KEY='writeoff_db_v2_'+k;ST_KEY='writeoff_settings_v2_'+k;SY_KEY='writeoff_sync_v2_'+k;
@@ -301,46 +342,159 @@ function startApp(){
       localStorage.removeItem('writeoff_db_v1');localStorage.removeItem('writeoff_settings_v1');localStorage.removeItem('writeoff_sync_v1');
     }catch(e){}
   }
+  items.forEach(x=>{if(typeof x.ts!=='number')x.ts=0});
+  dict=load(DICT_KEY,defaultDict());
   sel.clear();allItems=[];allMode=false;$('#scope').value='mine';
-  document.body.classList.toggle('admin',sess.role==='admin');
-  $('#who').innerHTML='Вы вошли как <b>'+esc(sess.login)+'</b> ('+(sess.role==='admin'?'администратор':'пользователь')+')';
+  applyRole();
   $('#loginBox').classList.remove('on');
   buildForm();buildSettings();updCnt();clearForm(false);
   syMsg('Проверяю данные аккаунта…');
-  // При входе сначала загружаем записи аккаунта с сервера, а не полагаемся на память телефона/компьютера.
-  // Несинхронизированные локальные изменения сохраняются, серверные записи имеют приоритет при совпадении ID.
-  api(sess,'login').then(async()=>{
-    try{
-      const remote=await api(sess,'pull',{scope:'mine'});
-      const serverItems=Array.isArray(remote.items)?remote.items:[];
-      const merged=new Map(serverItems.map(x=>{const {owner,...rest}=x;return [String(rest.id),rest]}));
-      const pending=new Set(sync.up||[]);
-      items.forEach(x=>{if(!merged.has(String(x.id))&&pending.has(x.id))merged.set(String(x.id),x)});
-      items=[...merged.values()];
-      save(DB_KEY,items);updCnt();showSize();
-      syMsg('Данные аккаунта загружены ✓ Устройств: '+items.length);
-      // После подтягивания серверной базы отправляем только очередь изменений, ожидавшую синхронизации.
-      flush();
-    }catch(e){
-      syMsg('Не удалось загрузить данные из таблицы: '+e.message+'. Локальная копия сохранена.');
-      flush();
-    }
-  }).catch(e=>{if(e.code==='auth')logout('Пароль изменён. Войдите заново.')});
+  refreshAccount();startHeartbeat();
+}
+// Вход: роль и права берём с сервера; затем общие справочники; затем записи аккаунта.
+async function refreshAccount(){
+  try{
+    const j=await api(sess,'login');
+    if(j.role!==sess.role){sess.role=j.role;save(SESS_KEY,sess);applyRole();buildForm()}
+    if(!(j.v>=3))toast('Скрипт Google устарел: обновите Code.gs (см. инструкцию)');
+    if(await loadDict(true))await offerLegacyMigration();
+    await pullMine();
+    flush();
+  }catch(e){
+    if(e.code==='auth'){logout('Пароль изменён. Войдите заново.');return}
+    syMsg('Нет связи: '+e.message+'. Работаю с локальной копией, изменения отправятся позже.');
+    flush();
+  }
+}
+// Слияние с сервером: сервер — источник истины, но локальные несинхронизированные записи НЕ теряются
+// и пустой ответ сервера никогда не стирает локальные данные.
+async function pullMine(){
+  const remote=await api(sess,'pull',{scope:'mine'});
+  const srv=Array.isArray(remote.items)?remote.items:[];
+  const deleted=new Set((remote.deleted||[]).map(String));
+  const pendUp=new Set(sync.up||[]), pendRm=new Set(sync.rm||[]);
+  const local=new Map(items.map(x=>[String(x.id),x]));
+  const merged=new Map();
+  srv.forEach(x=>{
+    const {owner,...rest}=x, id=String(rest.id), l=local.get(id);
+    if(pendRm.has(id))return;
+    if(l&&pendUp.has(l.id)&&(l.ts||0)>(rest.ts||0))merged.set(id,l);
+    else merged.set(id,rest);
+  });
+  items.forEach(x=>{
+    const id=String(x.id);
+    if(merged.has(id)||pendRm.has(id))return;
+    if(deleted.has(id)&&!pendUp.has(x.id))return;   // удалено на другом устройстве
+    merged.set(id,x);
+    if(!pendUp.has(x.id)){sync.up.push(x.id);pendUp.add(x.id)}   // есть только здесь — отправим на сервер
+  });
+  sync.up=sync.up.filter(id=>merged.has(String(id)));
+  items=[...merged.values()];
+  save(DB_KEY,items);sysave();updCnt();showSize();
+  syMsg('Данные аккаунта загружены ✓ Устройств: '+items.length);
 }
 
+/* ---- Активность (heartbeat): сервер сам считает «онлайн» по времени последнего сигнала ---- */
+async function ping(){
+  if(!sess||document.hidden)return;
+  try{
+    const j=await api(sess,'ping');
+    if(j.role&&j.role!==sess.role){sess.role=j.role;save(SESS_KEY,sess);applyRole();buildForm();buildSettings()}
+  }catch(e){if(e.code==='auth')logout('Пароль изменён. Войдите заново.')}
+}
+function startHeartbeat(){if(hb)clearInterval(hb);hb=setInterval(ping,60000);ping()}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)ping()});
+
+/* ---- Общие справочники (хранятся на сервере, видны на всех устройствах) ---- */
+const FALLBACK_PEOPLE=[{name:'Sarsen Sundetov',position:'IT Specialist'},{name:'Malik Kalybayev',position:''}];
+const STALE_NAMES=['vijay norbert','ulyana serikbayeva'];   // устаревшие имена: никогда не переносим из локальных списков
+function defaultDict(){return {people:FALLBACK_PEOPLE.map(p=>({...p})),types:DEVICE_TYPES.slice()}}
+function deviceTypes(){return dict.types}
+async function loadDict(quiet){
+  try{
+    const j=await api(sess,'dict.get');
+    if(!Array.isArray(j.people)||!Array.isArray(j.types))throw Object.assign(new Error(ERR.unknown),{code:'unknown'});
+    dict={people:j.people.map(p=>({name:String(p.name||''),position:String(p.position||'')})),types:j.types.map(String)};
+    save(DICT_KEY,dict);afterDictChange();return true;
+  }catch(e){
+    if(e.code==='auth')logout('Пароль изменён. Войдите заново.');
+    else if(!quiet||e.code==='unknown')toast(e.message);
+    return false;
+  }
+}
+function afterDictChange(){refreshTypeSelect();buildSettings();if(!$('#dictModal').classList.contains('hide')&&$('#dictModal').classList.contains('on'))renderDictModal()}
+function refreshTypeSelect(){
+  const sl=$('#t_name');if(!sl)return;
+  sl.innerHTML='<option value="">— выберите из списка —</option>'+deviceTypes().map(t=>`<option>${esc(t)}</option>`).join('')+'<option value="__other">Другое (ввести вручную)</option>';
+  syncSel('name');
+}
+// Раньше списки хранились только на устройстве. Предлагаем перенести их в общий справочник (один раз).
+async function offerLegacyMigration(){
+  const lp=Array.isArray(settings.peopleRoster)?settings.peopleRoster:[], lt=Array.isArray(settings.deviceTypes)?settings.deviceTypes:[];
+  if(!lp.length&&!lt.length)return;
+  if(sess.role==='admin'){
+    const hasP=new Set(dict.people.map(p=>p.name.toLowerCase())), hasT=new Set(dict.types.map(t=>t.toLowerCase()));
+    const np=[...new Set(lp.map(x=>String(x||'').trim()).filter(x=>x&&!hasP.has(x.toLowerCase())&&!STALE_NAMES.includes(x.toLowerCase())))];
+    const nt=[...new Set(lt.map(x=>String(x||'').trim()).filter(x=>x&&!hasT.has(x.toLowerCase())))];
+    if((np.length||nt.length)&&confirm('На этом устройстве найдены локальные списки, которых нет в общем справочнике.\n\nЛюди: '+(np.join(', ')||'—')+'\nТипы: '+(nt.join(', ')||'—')+'\n\nПеренести их в общий справочник (для всех устройств)?\nЕсли нажать «Отмена», локальные списки будут удалены.')){
+      for(const n of np)await api(sess,'dict.add',{kind:'people',value:n,position:''}).catch(()=>{});
+      for(const t of nt)await api(sess,'dict.add',{kind:'types',value:t}).catch(()=>{});
+      await loadDict(true);
+    }
+  }
+  delete settings.peopleRoster;delete settings.deviceTypes;save(ST_KEY,settings);
+}
+async function dictAdd(kind){
+  if(!sess||sess.role!=='admin')return;
+  const value=prompt(kind==='people'?'ФИО нового человека:':'Название нового типа устройства:');
+  if(!value||!value.trim())return;
+  let position='';
+  if(kind==='people')position=prompt('Должность (необязательно, например IT Specialist):','')||'';
+  try{
+    const j=await api(sess,'dict.add',{kind,value:value.trim(),position:position.trim()});
+    dict={people:j.people,types:j.types};save(DICT_KEY,dict);afterDictChange();toast('Добавлено для всех устройств ✓');
+  }catch(e){toast(e.message)}
+}
+let dictKind='people';
+function openDictModal(kind){
+  if(!sess||sess.role!=='admin')return;
+  dictKind=kind;renderDictModal();$('#dictModal').classList.add('on');
+}
+function renderDictModal(){
+  const list=dictKind==='people'?dict.people.map(p=>({v:p.name,sub:p.position})):dict.types.map(t=>({v:t,sub:''}));
+  $('#dictTitle').textContent=dictKind==='people'?'Люди (общий справочник)':'Типы устройств (общий справочник)';
+  $('#dictList').innerHTML=list.length?list.map(x=>`<div class="item"><div class="t"><b>${esc(x.v)}</b>${x.sub?'<br><span class="small">'+esc(x.sub)+'</span>':''}</div><button class="btn sec" data-dd="${esc(x.v)}" title="Удалить">🗑</button></div>`).join(''):'<p class="small">Список пуст.</p>';
+  $('#dictList').querySelectorAll('[data-dd]').forEach(b=>b.onclick=async()=>{
+    if(!confirm('Удалить «'+b.dataset.dd+'» из общего списка на всех устройствах?\nУже созданные документы это не изменит.'))return;
+    try{
+      const j=await api(sess,'dict.del',{kind:dictKind,value:b.dataset.dd});
+      dict={people:j.people,types:j.types};save(DICT_KEY,dict);afterDictChange();renderDictModal();toast('Удалено ✓');
+    }catch(e){toast(e.message)}
+  });
+}
+$('#dictClose').onclick=()=>$('#dictModal').classList.remove('on');
+$('#dictAddBtn').onclick=async()=>{await dictAdd(dictKind);renderDictModal()};
+$('#dictPeople').onclick=()=>openDictModal('people');
+$('#dictTypes').onclick=()=>openDictModal('types');
+
 /* ============ ВКЛАДКИ ============ */
+
+let usersTimer=null;
 document.querySelectorAll('header button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('header button').forEach(x=>x.classList.toggle('on',x===b));
   ['add','list','docs','users','data'].forEach(t=>$('#tab-'+t).classList.toggle('hide',t!==b.dataset.tab));
+  if(usersTimer){clearInterval(usersTimer);usersTimer=null}
   if(b.dataset.tab==='list')renderList();
-  if(b.dataset.tab==='docs')$('#selCnt').textContent=sel.size;
-  if(b.dataset.tab==='users')renderUsers();
+  if(b.dataset.tab==='docs'){
+    $('#selCnt').textContent=sel.size;
+    if(!docDateTouched&&$('#s_date'))$('#s_date').value=todayText();   // дата всегда актуальная
+    if(sess)loadDict(true);
+  }
+  if(b.dataset.tab==='users'){renderUsers();usersTimer=setInterval(()=>{if(!document.hidden)renderUsers(true)},30000)}
   if(b.dataset.tab==='data')showSize();
 });
 
 /* ============ ФОРМА ============ */
-function deviceTypes(){return Array.isArray(settings.deviceTypes)?settings.deviceTypes:DEVICE_TYPES;}
-function manageDeviceType(remove){if(!sess||sess.role!=='admin')return;const list=deviceTypes();if(remove){const name=prompt('Введите точное название типа для удаления:\n\n'+list.join('\n'));if(!name)return;const i=list.findIndex(x=>x.toLowerCase()===name.trim().toLowerCase());if(i<0){toast('Тип не найден');return}if(!confirm('Удалить тип «'+list[i]+'»?'))return;list.splice(i,1)}else{const name=prompt('Название нового типа устройства:');if(!name||!name.trim())return;if(list.some(x=>x.toLowerCase()===name.trim().toLowerCase())){toast('Такой тип уже есть');return}list.push(name.trim())}settings.deviceTypes=list;save(ST_KEY,settings);buildForm();toast('Список типов обновлён')}
 function buildForm(){
   $('#fields').innerHTML=FIELDS.map(f=>`
     <label>${f.l}</label>
@@ -359,7 +513,7 @@ function buildForm(){
 function syncSel(k){
   const sl=$('#t_'+k);if(!sl)return;
   const v=$('#f_'+k).value.trim();
-  sl.value=DEVICE_TYPES.includes(v)?v:(v?'__other':'');
+  sl.value=deviceTypes().includes(v)?v:(v?'__other':'');
 }
 function readForm(){const o={};FIELDS.forEach(f=>o[f.k]=$('#f_'+f.k).value.trim());return o}
 function fillForm(o){FIELDS.forEach(f=>{$('#f_'+f.k).value=o?.[f.k]||'';if(f.opts)syncSel(f.k)})}
@@ -372,10 +526,10 @@ function clearForm(keepPlace){
 function saveItem(next){
   const o=readForm();
   if(!o.asset&&!o.serial&&!o.model){toast('Заполните хотя бы номер, серийный или модель');return false}
-  if(editId){const i=items.findIndex(x=>x.id===editId);items[i]={...o,id:editId}}
+  if(editId){const i=items.findIndex(x=>x.id===editId);items[i]={...o,id:editId,ts:Date.now()}}
   else{
     if(o.asset&&items.some(x=>x.asset===o.asset)&&!confirm('Устройство с таким номером уже есть. Добавить ещё раз?'))return false;
-    items.push({...o,id:Date.now().toString(36)});
+    items.push({...o,id:Date.now().toString(36),ts:Date.now()});
   }
   save(DB_KEY,items);updCnt();toast('Сохранено ✓');queueUp(editId||items[items.length-1].id);
   clearForm(next);window.scrollTo(0,0);return true;
@@ -385,7 +539,7 @@ $('#saveNext').onclick=()=>saveItem(true);
 $('#clear').onclick=()=>clearForm(false);
 
 /* ============ СКАНИРОВАНИЕ (OCR) ============ */
-let scanField=null, worker=null, srcBmp=null, crop=null, dragStart=null, busy=false;
+let scanField=null, worker=null, srcBmp=null, crop=null, busy=false;
 const NUMF={asset:1,serial:1};
 function startScan(k){scanField=k;$('#photo').value='';$('#photo').click()}
 $('#photo').onchange=async e=>{
@@ -393,40 +547,112 @@ $('#photo').onchange=async e=>{
   try{srcBmp=await createImageBitmap(file)}catch(err){toast('Не удалось открыть фото');return}
   openCrop();
 };
+
+/* ---- Редактор области: двигать рамку, тянуть за углы и стороны, ползунки ширины/высоты, предпросмотр ---- */
+const HIT=28, MINS=24;
+let cropMode=null, cropStart=null, cropOrig=null, prevQueued=false;
 function openCrop(){
   $('#cropModal').classList.add('on');
   const cv=$('#cropCv');
-  const maxW=Math.min(window.innerWidth-24,720), maxH=window.innerHeight*0.6;
+  const maxW=Math.min(window.innerWidth-24,720), maxH=window.innerHeight*0.5;
   const r=Math.min(maxW/srcBmp.width,maxH/srcBmp.height);
   cv.width=Math.round(srcBmp.width*r);cv.height=Math.round(srcBmp.height*r);cv.dataset.r=r;
+  $('#cropW').max=cv.width;$('#cropH').max=cv.height;
   crop=null;$('#cropSt').textContent='';drawCrop();
 }
 function closeCrop(){$('#cropModal').classList.remove('on');if(srcBmp&&srcBmp.close)srcBmp.close();srcBmp=null;crop=null}
+function clampCrop(){
+  const cv=$('#cropCv');
+  crop.w=Math.max(MINS,Math.min(crop.w,cv.width));crop.h=Math.max(MINS,Math.min(crop.h,cv.height));
+  crop.x=Math.max(0,Math.min(crop.x,cv.width-crop.w));crop.y=Math.max(0,Math.min(crop.y,cv.height-crop.h));
+}
+function syncSliders(){if(crop){$('#cropW').value=Math.round(crop.w);$('#cropH').value=Math.round(crop.h)}}
 function drawCrop(){
   const cv=$('#cropCv'),x=cv.getContext('2d');
   x.drawImage(srcBmp,0,0,cv.width,cv.height);
-  if(crop){
+  if(crop&&crop.w>0&&crop.h>0){
     x.fillStyle='rgba(0,0,0,.55)';
     x.fillRect(0,0,cv.width,crop.y);
     x.fillRect(0,crop.y+crop.h,cv.width,cv.height-crop.y-crop.h);
     x.fillRect(0,crop.y,crop.x,crop.h);
     x.fillRect(crop.x+crop.w,crop.y,cv.width-crop.x-crop.w,crop.h);
     x.strokeStyle='#4da3ff';x.lineWidth=3;x.strokeRect(crop.x,crop.y,crop.w,crop.h);
+    x.fillStyle='#4da3ff';
+    [[0,0],[.5,0],[1,0],[0,.5],[1,.5],[0,1],[.5,1],[1,1]].forEach(([a,b])=>x.fillRect(crop.x+crop.w*a-6,crop.y+crop.h*b-6,12,12));
   }
+  if(!prevQueued){prevQueued=true;requestAnimationFrame(()=>{prevQueued=false;drawPreview()})}
+}
+function drawPreview(){
+  const pv=$('#cropPrev'),px=pv.getContext('2d');
+  if(!srcBmp||!crop||crop.w<MINS||crop.h<MINS){pv.width=1;pv.height=1;pv.classList.add('hide');return}
+  pv.classList.remove('hide');
+  const r=+$('#cropCv').dataset.r, sx=crop.x/r, sy=crop.y/r, sw=crop.w/r, sh=crop.h/r;
+  const sc=Math.min(Math.min(360,window.innerWidth-40)/sw,140/sh,2);
+  pv.width=Math.max(1,Math.round(sw*sc));pv.height=Math.max(1,Math.round(sh*sc));
+  px.drawImage(srcBmp,sx,sy,sw,sh,0,0,pv.width,pv.height);
+  preprocess(pv,$('#bw').checked);
 }
 function cvPos(ev){
   const cv=$('#cropCv'),b=cv.getBoundingClientRect();
   return{x:Math.max(0,Math.min(b.width,ev.clientX-b.left))*cv.width/b.width,
          y:Math.max(0,Math.min(b.height,ev.clientY-b.top))*cv.height/b.height};
 }
+function hitCrop(p){
+  if(!crop||crop.w<=0)return 'create';
+  const {x,y,w,h}=crop, near=(a,b)=>Math.abs(a-b)<=HIT;
+  const inX=p.x>x-HIT&&p.x<x+w+HIT, inY=p.y>y-HIT&&p.y<y+h+HIT;
+  if(!(inX&&inY))return 'create';
+  const L=near(p.x,x),R=near(p.x,x+w),T=near(p.y,y),B=near(p.y,y+h);
+  const ns=T?'n':(B?'s':''), ew=L?'w':(R?'e':'');
+  if(ns||ew)return ns+ew;
+  return 'move';
+}
+const CURS={nw:'nwse-resize',se:'nwse-resize',ne:'nesw-resize',sw:'nesw-resize',n:'ns-resize',s:'ns-resize',e:'ew-resize',w:'ew-resize',move:'move',create:'crosshair'};
 (()=>{
   const cv=$('#cropCv');
-  cv.onpointerdown=ev=>{ev.preventDefault();cv.setPointerCapture(ev.pointerId);dragStart=cvPos(ev);crop={x:dragStart.x,y:dragStart.y,w:0,h:0};drawCrop()};
-  cv.onpointermove=ev=>{if(!dragStart)return;const p=cvPos(ev);
-    crop={x:Math.min(p.x,dragStart.x),y:Math.min(p.y,dragStart.y),w:Math.abs(p.x-dragStart.x),h:Math.abs(p.y-dragStart.y)};drawCrop()};
-  cv.onpointerup=cv.onpointercancel=()=>{dragStart=null};
+  cv.onpointerdown=ev=>{
+    ev.preventDefault();cv.setPointerCapture(ev.pointerId);
+    const p=cvPos(ev);cropStart=p;cropMode=hitCrop(p);cropOrig=crop?{...crop}:null;
+    if(cropMode==='create')crop={x:p.x,y:p.y,w:0,h:0};
+    drawCrop();
+  };
+  cv.onpointermove=ev=>{
+    const p=cvPos(ev);
+    if(!cropMode){cv.style.cursor=CURS[hitCrop(p)]||'crosshair';return}
+    const dx=p.x-cropStart.x, dy=p.y-cropStart.y;
+    if(cropMode==='create'){crop={x:Math.min(p.x,cropStart.x),y:Math.min(p.y,cropStart.y),w:Math.abs(dx),h:Math.abs(dy)}}
+    else if(cropMode==='move'){crop={...cropOrig,x:cropOrig.x+dx,y:cropOrig.y+dy};clampCrop()}
+    else{
+      let {x,y,w,h}=cropOrig;
+      if(cropMode.includes('w')){x+=dx;w-=dx}
+      if(cropMode.includes('e')){w+=dx}
+      if(cropMode.includes('n')){y+=dy;h-=dy}
+      if(cropMode.includes('s')){h+=dy}
+      if(w<MINS){if(cropMode.includes('w'))x-=MINS-w;w=MINS}
+      if(h<MINS){if(cropMode.includes('n'))y-=MINS-h;h=MINS}
+      crop={x,y,w,h};clampCrop();
+    }
+    syncSliders();drawCrop();
+  };
+  cv.onpointerup=cv.onpointercancel=()=>{
+    cropMode=null;
+    if(crop&&(crop.w<MINS||crop.h<MINS)){crop=null;drawCrop()}   // простое касание без выделения
+    syncSliders();
+  };
 })();
-document.addEventListener('click',e=>{if(e.target.id==='addDeviceType')manageDeviceType(false);if(e.target.id==='removeDeviceType')manageDeviceType(true)});
+function sliderResize(dim){
+  const cv=$('#cropCv');
+  if(!crop){crop={x:cv.width*.2,y:cv.height*.375,w:cv.width*.6,h:cv.height*.25}}
+  crop[dim]=+(dim==='w'?$('#cropW'):$('#cropH')).value;
+  clampCrop();syncSliders();drawCrop();
+}
+$('#cropW').oninput=()=>sliderResize('w');
+$('#cropH').oninput=()=>sliderResize('h');
+$('#bw').onchange=()=>{if(srcBmp)drawCrop()};
+document.addEventListener('click',e=>{
+  if(e.target.id==='addDeviceType')dictAdd('types');
+  if(e.target.id==='removeDeviceType')openDictModal('types');
+});
 $('#cropCancel').onclick=closeCrop;
 $('#cropGo').onclick=()=>runOcr(true);
 $('#cropAll').onclick=()=>{crop=null;drawCrop();runOcr(false)};
@@ -454,17 +680,33 @@ function preprocess(cv,bw){
   for(let i=0;i<n;i++){const v=invert?255-g[i]:g[i];d[i*4]=d[i*4+1]=d[i*4+2]=v;d[i*4+3]=255}
   x.putImageData(id,0,0);
 }
+// Штрихкоды: встроенный BarcodeDetector (Chrome/Android), запасной вариант — ZXing. Если не получилось — тихо идём дальше к тексту.
+async function readBarcodes(canvas){
+  const out=[];
+  try{if('BarcodeDetector' in window){const det=new BarcodeDetector();(await det.detect(canvas)).forEach(b=>b.rawValue&&out.push(b.rawValue))}}catch(e){}
+  if(!out.length&&window.ZXing){
+    try{
+      const hints=new Map();hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
+      const res=await new ZXing.BrowserMultiFormatReader(hints).decodeFromImageUrl(canvas.toDataURL('image/png'));
+      if(res&&res.getText)out.push(res.getText());
+    }catch(e){}
+  }
+  return [...new Set(out.map(x=>String(x).trim()).filter(Boolean))];
+}
 async function runOcr(useCrop){
   if(busy||!srcBmp)return;busy=true;
   const st=$('#cropSt');
   try{
     const r=+$('#cropCv').dataset.r;
     let sx=0,sy=0,sw=srcBmp.width,sh=srcBmp.height;
-    if(useCrop&&crop&&crop.w>15&&crop.h>10){sx=crop.x/r;sy=crop.y/r;sw=crop.w/r;sh=crop.h/r}
+    if(useCrop&&crop&&crop.w>=MINS&&crop.h>=MINS){sx=crop.x/r;sy=crop.y/r;sw=crop.w/r;sh=crop.h/r}
     else if(useCrop){toast('Сначала обведите рамкой нужную строку');busy=false;return}
     const sc=Math.min(3,1800/sw);
     const cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(sw*sc));cv.height=Math.max(1,Math.round(sh*sc));
     cv.getContext('2d').drawImage(srcBmp,sx,sy,sw,sh,0,0,cv.width,cv.height);
+    st.textContent='Ищу штрихкод…';
+    const codes=await readBarcodes(cv);
+    if(codes.length){cv.width=cv.height=1;closeCrop();showCandidates('',codes);busy=false;return}
     preprocess(cv,$('#bw').checked);
     if(!worker){
       st.textContent='Загрузка распознавания (первый раз ~10 сек)...';
@@ -476,17 +718,17 @@ async function runOcr(useCrop){
       tessedit_pageseg_mode:(cv.width/cv.height>4)?'7':'6',
       preserve_interword_spaces:'1'
     });
-    st.textContent='Распознаю...';
+    st.textContent='Распознаю текст...';
     const {data}=await worker.recognize(cv);
     let lines=(data.lines||[]).map(l=>(l.words||[]).filter(w=>w.confidence>50).map(w=>w.text).join(' ').trim()).filter(Boolean);
     if(!lines.length)lines=(data.text||'').split(/\n+/);
     cv.width=cv.height=1;
     closeCrop();
-    showCandidates(lines.join('\n'));
+    showCandidates(lines.join('\n'),[]);
   }catch(err){st.textContent='Ошибка: '+err.message+'. Нужен интернет при первом запуске.'}
   busy=false;
 }
-function showCandidates(text){
+function showCandidates(text,codes){
   const f=FIELDS.find(x=>x.k===scanField), num=NUMF[scanField];
   const lines=text.split(/\n+/).map(s=>s.trim()).filter(s=>s.length>1);
   let tokens=[];
@@ -503,13 +745,14 @@ function showCandidates(text){
     const score=t=>(/^[A-Za-z0-9\-\/._]+$/.test(t)?2:0)+(t.length>=5&&t.length<=24?1:0)-(/\s/.test(t)?1:0);
     tokens.sort((a,b)=>score(b)-score(a));
   }
-  tokens=tokens.slice(0,12);
+  tokens=tokens.filter(t=>!codes.includes(t)).slice(0,12);
+  const all=[...codes.map(c=>({t:c,code:true})),...tokens.map(t=>({t,code:false}))];
   const st=$('#ocrStatus');
-  if(!tokens.length){st.textContent='Текст не найден. Снимите ближе, при хорошем свете, и обведите только нужную строку.';$('#chips').innerHTML='';return}
-  st.textContent='Нажмите на нужный вариант — он вставится в поле «'+f.l+'». Если не то — повторите съёмку.';
-  $('#chips').innerHTML=tokens.map(t=>`<span class="chip">${esc(t)}</span>`).join('');
-  document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{$('#f_'+scanField).value=c.textContent;toast('Вставлено ✓')});
-  const el=$('#f_'+scanField);if(!el.value&&num)el.value=tokens[0];
+  if(!all.length){st.textContent='Текст и штрихкод не найдены. Снимите ближе, при хорошем свете, и выделите только нужную строку.';$('#chips').innerHTML='';return}
+  st.textContent=(codes.length?'Найден штрихкод. ':'')+'Нажмите на нужный вариант — он вставится в поле «'+f.l+'». Если не то — повторите съёмку.';
+  $('#chips').innerHTML=all.map(x=>`<span class="chip${x.code?' code':''}">${x.code?'▮ ':''}${esc(x.t)}</span>`).join('');
+  document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{$('#f_'+scanField).value=c.textContent.replace(/^▮ /,'');toast('Вставлено ✓')});
+  const el=$('#f_'+scanField);if(!el.value&&(num||codes.length))el.value=all[0].t;
   $('#chips').scrollIntoView({block:'center',behavior:'smooth'});
 }
 
@@ -558,26 +801,46 @@ $('#selAll').onclick=()=>{curSrc().forEach(x=>sel.add(K(x)));renderList()};
 $('#selNone').onclick=()=>{sel.clear();renderList()};
 
 /* ============ ПОЛЬЗОВАТЕЛИ (админ) ============ */
-async function renderUsers(){
+const DEV_ICON={phone:'📱',tablet:'📟',desktop:'💻'};
+const DEV_NAME={phone:'телефон',tablet:'планшет',desktop:'компьютер'};
+function agoText(t,now){
+  if(!t)return 'не заходил';
+  const m=Math.max(0,Math.round((now-t)/60000));
+  if(m<1)return 'только что';
+  if(m<60)return m+' мин назад';
+  const h=Math.round(m/60);
+  if(h<24)return h+' ч назад';
+  return Math.round(h/24)+' дн назад';
+}
+async function renderUsers(silent){
   if(!sess||sess.role!=='admin')return;
-  const box=$('#usersList');box.innerHTML='<p class="small">Загрузка...</p>';
+  const box=$('#usersList');
+  if(!silent)box.innerHTML='<p class="small">Загрузка...</p>';
   try{
     const j=await api(sess,'users.list');
-    box.innerHTML=
-      `<div class="item"><div class="t"><b>${esc(sess.login)}</b> (администратор)<br><span class="small">устройств: ${j.adminCount}</span></div></div>`+
-      (j.users.length?j.users.map(u=>`
-      <div class="item"><div class="t"><b>${esc(u.login)}</b><br><span class="small">устройств: ${u.count} · создан ${esc(u.created)}</span></div>
-        <button class="btn sec" data-pw="${esc(u.login)}" title="Сменить пароль">🔑</button>
-        <button class="btn sec" data-ud="${esc(u.login)}" title="Удалить">🗑</button></div>`).join(''):'<p class="small">Других пользователей пока нет.</p>');
+    box.innerHTML=j.users.map(u=>`
+      <div class="item"><div class="t">
+        <span class="dot ${u.online?'on':'off'}" title="${u.online?'онлайн':'офлайн'}"></span><b>${esc(u.login)}</b>${u.main?' · главный администратор':''}<br>
+        <span class="small">${u.online?'онлайн':'офлайн'} · ${esc(agoText(u.lastSeen,j.now))} · ${DEV_ICON[u.device]||'❔'} ${esc(DEV_NAME[u.device]||'устройство неизвестно')} · записей: ${u.count}</span>
+        ${u.main?'<br><span class="small">Роль: Администратор</span>':`<br><select class="rolesel" data-role="${esc(u.login)}"><option value="user" ${u.role==='user'?'selected':''}>Обычный пользователь</option><option value="admin" ${u.role==='admin'?'selected':''}>Администратор</option></select>`}
+      </div>
+      ${u.main?'':`<button class="btn sec" data-pw="${esc(u.login)}" title="Сменить пароль">🔑</button><button class="btn sec" data-ud="${esc(u.login)}" title="Удалить">🗑</button>`}
+      </div>`).join('');
+    box.querySelectorAll('[data-role]').forEach(sl=>sl.onchange=async()=>{
+      const prev=sl.value==='admin'?'user':'admin';
+      if(!confirm('Сменить роль «'+sl.dataset.role+'» на «'+(sl.value==='admin'?'Администратор':'Обычный пользователь')+'»?')){sl.value=prev;return}
+      try{await api(sess,'users.role',{target:sl.dataset.role,role:sl.value});toast('Роль изменена ✓')}
+      catch(e){sl.value=prev;toast(e.message)}
+    });
     box.querySelectorAll('[data-pw]').forEach(b=>b.onclick=async()=>{
       const np=prompt('Новый пароль для '+b.dataset.pw+' (минимум 6 символов):');if(!np)return;
       try{await api(sess,'users.pass',{target:b.dataset.pw,newPass:np});toast('Пароль изменён ✓')}catch(e){toast(e.message)}
     });
     box.querySelectorAll('[data-ud]').forEach(b=>b.onclick=async()=>{
-      if(!confirm('Удалить пользователя '+b.dataset.ud+'? Его устройства в таблице останутся (их можно удалить в «Список → Все пользователи»).'))return;
+      if(!confirm('Удалить пользователя '+b.dataset.ud+'? Его записи в таблице останутся (их можно удалить в «Список → Все пользователи»).'))return;
       try{await api(sess,'users.del',{target:b.dataset.ud});renderUsers()}catch(e){toast(e.message)}
     });
-  }catch(e){box.innerHTML='<p class="small">Не удалось загрузить: '+esc(e.message)+'</p>'}
+  }catch(e){if(!silent)box.innerHTML='<p class="small">Не удалось загрузить: '+esc(e.message)+'</p>'}
 }
 $('#nuAdd').onclick=async()=>{
   const l=$('#nuLogin').value.trim(),p=$('#nuPass').value;
@@ -598,9 +861,10 @@ async function flush(){
   try{
     const sent=[...sync.up], rm=[...sync.rm];
     const up=sent.map(id=>items.find(x=>x.id===id)).filter(Boolean);
-    await api(sess,'sync',{upsert:up,remove:rm});
+    const res=await api(sess,'sync',{upsert:up,remove:rm});
     sync.up=sync.up.filter(id=>!sent.includes(id));sync.rm=sync.rm.filter(id=>!rm.includes(id));sysave();
     syMsg('Синхронизировано ✓ '+new Date().toLocaleTimeString());
+    if(res.rejected&&res.rejected.length)await pullMine().catch(()=>{});   // сервер отклонил устаревшие записи — берём актуальные
   }catch(e){
     if(e.code==='auth')logout('Пароль изменён. Войдите заново.');
     else syMsg('Не отправлено ('+e.message+'). Повторится автоматически, когда появится интернет.');
@@ -609,18 +873,13 @@ async function flush(){
 }
 $('#syPush').onclick=()=>{sync.up=items.map(x=>x.id);sync.rm=[];sysave();syMsg('Отправляю...');flush()};
 $('#syPull').onclick=async()=>{
-  try{
-    syMsg('Загружаю...');
-    const j=await api(sess,'pull',{scope:'mine'});
-    const map=new Map(items.map(x=>[x.id,x]));
-    j.items.forEach(x=>{const {owner,...rest}=x;map.set(String(x.id),rest)});
-    items=[...map.values()];save(DB_KEY,items);updCnt();showSize();
-    syMsg('Загружено ✓ Всего устройств: '+items.length);
-  }catch(e){syMsg('Ошибка загрузки: '+e.message)}
+  try{syMsg('Загружаю...');await pullMine();await loadDict(true)}
+  catch(e){syMsg('Ошибка загрузки: '+e.message)}
 };
-window.addEventListener('online',flush);
+window.addEventListener('online',()=>{flush();ping()});
 
 /* ============ ДАННЫЕ ============ */
+
 function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000)}
 function showSize(){const n=new Blob([JSON.stringify(items)]).size;$('#size').textContent=`Устройств: ${items.length}. Размер базы: ${(n/1024).toFixed(1)} КБ.`}
 $('#exp').onclick=()=>dl(new Blob([JSON.stringify({items,settings})],{type:'application/json'}),'база-списание-'+new Date().toISOString().slice(0,10)+'.json');
@@ -635,27 +894,19 @@ $('#imp').onchange=async e=>{
     save(DB_KEY,items);save(ST_KEY,settings);sysave();updCnt();buildSettings();showSize();toast('База загружена ✓');flush();
   }catch(err){toast('Не удалось прочитать файл')}
 };
-$('#csv').onclick=()=>{
-  const headers=FIELDS.map(f=>f.l);
-  const data=[headers,...items.map(x=>FIELDS.map(f=>x[f.k]??''))];
-  if(window.XLSX){
-    const ws=XLSX.utils.aoa_to_sheet(data);
-    ws['!cols']=FIELDS.map(f=>({wch:Math.min(34,Math.max(16,f.l.length+3))}));
-    ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:Math.max(0,data.length-1),c:headers.length-1}})};
-    ws['!freeze']={xSplit:0,ySplit:1};
-    headers.forEach((h,c)=>{const cell=ws[XLSX.utils.encode_cell({r:0,c})];if(cell)cell.s={font:{bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1A56DB'}},alignment:{vertical:'center',wrapText:true}};});
-    items.forEach((x,r)=>['asset','serial'].forEach(k=>{
-      const idx=FIELDS.findIndex(f=>f.k===k),cell=ws[XLSX.utils.encode_cell({r:r+1,c:idx})];
-      if(cell){cell.t='s';cell.v=String(cell.v??'');}
-    }));
-    items.forEach((x,r)=>{const idx=FIELDS.findIndex(f=>f.k==='price'),cell=ws[XLSX.utils.encode_cell({r:r+1,c:idx})];if(cell&&String(cell.v??'').trim()!==''&&Number.isFinite(Number(String(cell.v).replace(',','.')))){cell.t='n';cell.v=Number(String(cell.v).replace(',','.'));cell.z='#,##0.00';}});
-    ws['!rows']=[{hpt:30},...items.map(()=>({hpt:22}))];
-    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Устройства');
-    XLSX.writeFile(wb,'Инвентаризация-'+new Date().toISOString().slice(0,10)+'.xlsx',{cellStyles:true});
-  }else{
-    const rows=items.map(x=>FIELDS.map(f=>'"'+String(x[f.k]||'').replace(/"/g,'""')+'"').join(';'));
-    dl(new Blob(['\ufeff'+[headers.map(h=>'"'+h+'"').join(';'),...rows].join('\r\n')],{type:'text/csv;charset=utf-8'}),'устройства.csv');
-  }
+$('#csv').onclick=async()=>{
+  try{
+    if(!window.JSZip)throw new Error('Не загрузилась библиотека для Excel. Проверьте интернет-соединение.');
+    const src=curSrc();
+    if(!src.length){toast('Список пуст');return}
+    const cols=[{h:'№',k:'#',t:'i',w:6},{h:'Инв. (asset) номер',k:'asset',t:'c',w:22},{h:'Наименование',k:'name',t:'t',w:26},
+      {h:'Производитель',k:'maker',t:'t',w:18},{h:'Модель',k:'model',t:'t',w:22},{h:'Серийный номер',k:'serial',t:'c',w:22},
+      {h:'Год',k:'year',t:'c',w:9},{h:'Местонахождение',k:'place',t:'t',w:20},{h:'Состояние / причина списания',k:'cond',t:'t',w:34},{h:'Стоимость',k:'price',t:'m',w:15}];
+    if(allMode)cols.push({h:'Пользователь',k:'owner',t:'c',w:16});
+    const bytes=await buildListXlsx({title:'Инвентаризация оборудования',sub:'Сформировано: '+todayText()+'  ·  Всего устройств: '+src.length+(allMode?'  ·  все пользователи':'  ·  пользователь: '+sess.login),cols,rows:src});
+    saveBytes(bytes,'Инвентаризация-'+new Date().toISOString().slice(0,10)+'.xlsx');
+    toast('Excel-файл создан ✓');
+  }catch(e){console.error(e);toast(e.message||'Не удалось создать файл')}
 };
 $('#wipe').onclick=()=>{
   if(confirm('Очистить список на ЭТОМ устройстве? В Google Таблице данные останутся, их можно вернуть кнопкой «Загрузить из таблицы».')){
@@ -663,145 +914,76 @@ $('#wipe').onclick=()=>{
   }
 };
 
-/* ============ ДОКУМЕНТЫ (WORD) ============ */
-function peopleRoster(){
-  const saved=Array.isArray(settings.peopleRoster)?settings.peopleRoster:EXPERTS;
-  return [...new Set(saved.map(x=>String(x||'').trim()).filter(Boolean))];
-}
-function addRosterPerson(){
-  if(!sess||sess.role!=='admin'){toast('Добавлять людей может только администратор');return}
-  const name=prompt('Введите ФИО нового участника комиссии / эксперта:');
-  if(!name||!name.trim())return;
-  const roster=peopleRoster();
-  if(roster.some(x=>x.toLocaleLowerCase()===name.trim().toLocaleLowerCase())){toast('Такое имя уже есть в списке');return}
-  roster.push(name.trim());settings.peopleRoster=roster;save(ST_KEY,settings);buildSettings();toast('Человек добавлен в список ✓');
-}
-function removeRosterPerson(){
-  if(!sess||sess.role!=='admin'){toast('Удалять людей может только администратор');return}
-  const roster=peopleRoster();const name=prompt('Введите точное имя, которое нужно удалить:\n\n'+roster.join('\n'));
-  if(!name)return;const idx=roster.findIndex(x=>x.toLocaleLowerCase()===name.trim().toLocaleLowerCase());
-  if(idx<0){toast('Имя не найдено');return}if(!confirm('Удалить «'+roster[idx]+'» из списков председателя, членов комиссии и экспертов?'))return;
-  const removed=roster.splice(idx,1)[0];settings.peopleRoster=roster;
-  ['chair','expert'].forEach(k=>{if(settings[k]===removed)settings[k]=''});
-  if(settings.members)settings.members=String(settings.members).split('\n').filter(x=>x!==removed).join('\n');
-  save(ST_KEY,settings);buildSettings();toast('Человек удалён из списка');
-}
+/* ============ ДОКУМЕНТЫ: ЗАПОЛНЕНИЕ EXCEL-ШАБЛОНОВ ============
+   Шаблоны act.xlsx и zakluchenie.xlsx лежат рядом с index.html и НЕ изменяются:
+   сайт каждый раз скачивает чистый шаблон, заполняет копию в памяти и отдаёт готовый файл. */
+const TEMPLATE_ACT='act.xlsx';
+const TEMPLATE_EXP='zakluchenie.xlsx';
+const DEFAULT_CHAIR_POSITION='Camp Manager';   // если у председателя в справочнике не указана должность
+const XLSX_MIME='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+let docDate='',docDateTouched=false;
+const posOf=n=>{const p=dict.people.find(x=>x.name===n);return p?p.position:''};
+const splitList=v=>String(v||'').split('\n').map(x=>x.trim()).filter(Boolean);
 function buildSettings(){
-  const roster=peopleRoster();
-  $('#settings').innerHTML=SETTINGS.map(s=>{
-    let control;
-    if(s.type==='members'){
-      const current=String(settings.members||'').split('\n').map(x=>x.trim()).filter(Boolean);
-      control=`<select id="s_members" multiple size="${Math.min(5,Math.max(3,roster.length))}" aria-label="Выберите членов комиссии">${roster.map(v=>`<option value="${esc(v)}" ${current.includes(v)?'selected':''}>${esc(v)}</option>`).join('')}</select><p class="small">Чтобы выбрать несколько человек, нажимайте на нужные имена. На телефоне можно выбрать несколько строк по очереди.</p>`;
-    }else if(s.type==='chair'||s.type==='expert'){
-      const value=settings[s.k]||'';
-      control=`<select id="s_${s.k}"><option value="">— выберите человека —</option>${roster.map(v=>`<option value="${esc(v)}" ${value===v?'selected':''}>${esc(v)}</option>`).join('')}</select>`;
-    }else if(s.type==='cost') control=`<select id="s_${s.k}"><option value="">— выберите центр затрат —</option>${COST_CENTERS.map(v=>`<option value="${v}">${v}</option>`).join('')}</select>`;
-    else control=`<input id="s_${s.k}" ${s.k==='date'?'placeholder="ДД.ММ.ГГГГ"':''}>`;
-    const adminTools=(s.type==='chair'||s.type==='members'||s.type==='expert')?`<div class="btns adm" style="margin-top:6px"><button type="button" class="btn sec" style="font-size:14px;padding:8px 10px" id="addPerson_${s.k}">＋ Добавить</button><button type="button" class="btn sec" style="font-size:14px;padding:8px 10px" id="removePerson_${s.k}">− Удалить из списка</button></div>`:'';
-    return `<label>${s.l}</label>${control}${adminTools}`;
-  }).join('');
-  const defaults={date:todayText(),location:'Birlik',expert:EXPERTS[0],members:EXPERTS.join('\n')};
-  SETTINGS.forEach(s=>{
-    const el=$('#s_'+s.k);
-    if(s.type==='members'){
-      const current=String(settings.members!==undefined?settings.members:(defaults.members||'')).split('\n').map(x=>x.trim()).filter(Boolean);
-      [...el.options].forEach(o=>o.selected=current.includes(o.value));
-      if(settings.members===undefined){settings.members=current.join('\n');save(ST_KEY,settings)}
-      el.onchange=()=>{settings.members=[...el.selectedOptions].map(o=>o.value).join('\n');save(ST_KEY,settings)};
-    }else{
-      el.value=settings[s.k]!==undefined?settings[s.k]:(defaults[s.k]||'');
-      el.onchange=el.oninput=()=>{settings[s.k]=el.value;save(ST_KEY,settings)};
-      if(settings[s.k]===undefined){settings[s.k]=el.value;save(ST_KEY,settings)}
-    }
-    if(s.type==='chair'||s.type==='members'||s.type==='expert'){
-      const b=$('#addPerson_'+s.k);if(b)b.onclick=addRosterPerson;const rb=$('#removePerson_'+s.k);if(rb)rb.onclick=removeRosterPerson;
-    }
+  const names=dict.people.map(p=>p.name);
+  ['chair','expert','responsible'].forEach(k=>{if(settings[k]&&!names.includes(settings[k]))settings[k]=''});
+  const mem=splitList(settings.members).filter(n=>names.includes(n));
+  settings.members=mem.join('\n');
+  if(settings.location===undefined)settings.location='Birlik';
+  save(ST_KEY,settings);
+  const label=n=>esc(n)+(posOf(n)?' — '+esc(posOf(n)):'');
+  const person=(k,ph)=>`<select id="s_${k}"><option value="">${ph}</option>${names.map(n=>`<option value="${esc(n)}">${label(n)}</option>`).join('')}</select>`;
+  $('#settings').innerHTML=`
+    <label>Номер документа</label><input id="s_docNo" autocomplete="off">
+    <label>Дата документа</label><input id="s_date" placeholder="ДД.ММ.ГГГГ" autocomplete="off">
+    <label>Центр затрат</label><select id="s_costCenter"><option value="">— выберите центр затрат —</option>${COST_CENTERS.map(v=>`<option value="${v}">${v}</option>`).join('')}</select>
+    <label>Местонахождение</label><input id="s_location" autocomplete="off">
+    <label>Председатель комиссии</label>${person('chair','— выберите человека —')}
+    <label>Члены комиссии (можно выбрать несколько)</label>
+    <div class="checks" id="s_members">${names.length?names.map(n=>`<label><input type="checkbox" value="${esc(n)}" ${mem.includes(n)?'checked':''}><span>${label(n)}</span></label>`).join(''):'<p class="small">Справочник людей пуст.</p>'}</div>
+    <label>Эксперт</label>${person('expert','— выберите эксперта —')}
+    <label>Ответственное лицо за актив (необязательно)</label>${person('responsible','— не указывать —')}
+    <div class="btns adm"><button type="button" class="btn sec" id="addPerson">＋ Добавить человека</button><button type="button" class="btn sec" id="removePerson">− Удалить из списка…</button></div>`;
+  ['docNo','costCenter','location','chair','expert','responsible'].forEach(k=>{
+    const el=$('#s_'+k);el.value=settings[k]||'';
+    el.oninput=el.onchange=()=>{settings[k]=el.value;save(ST_KEY,settings)};
   });
+  const d=$('#s_date');d.value=docDate||todayText();
+  d.oninput=()=>{docDate=d.value;docDateTouched=true};
+  $('#s_members').querySelectorAll('input').forEach(cb=>cb.onchange=()=>{
+    settings.members=[...$('#s_members').querySelectorAll('input:checked')].map(i=>i.value).join('\n');save(ST_KEY,settings);
+  });
+  $('#addPerson').onclick=()=>dictAdd('people');
+  $('#removePerson').onclick=()=>openDictModal('people');
 }
 function selected(){
   const m=new Map();[...items,...allItems].forEach(x=>m.set(K(x),x));
   const a=[...m.entries()].filter(([k])=>sel.has(k)).map(([,x])=>x);
   if(!a.length)toast('Отметьте устройства во вкладке «Список»');return a;
 }
-const D=()=>window.docx;
-const P=(text,o={})=>new (D().Paragraph)({alignment:o.al,spacing:{after:o.after??120},children:[new (D().TextRun)({text:text||'',bold:o.b,size:o.sz||24,font:'Times New Roman'})]});
-function cell(t,w,b){return new (D().TableCell)({width:{size:w,type:D().WidthType.PERCENTAGE},children:[P(t,{sz:20,b,after:0})]})}
-function table(cols,rows){
-  const W=cols.map(c=>c[1]);
-  return new (D().Table)({width:{size:100,type:D().WidthType.PERCENTAGE},rows:[
-    new (D().TableRow)({tableHeader:true,children:cols.map(c=>cell(c[0],c[1],true))}),
-    ...rows.map(r=>new (D().TableRow)({children:r.map((v,i)=>cell(v,W[i]))}))
-  ]});
+function currentDocSettings(){
+  const dEl=$('#s_date');
+  return {date:(dEl&&dEl.value.trim())||todayText(),docNo:(settings.docNo||'').trim(),costCenter:settings.costCenter||'',
+    location:(settings.location||'').trim()||'Birlik',chair:settings.chair||'',members:splitList(settings.members),
+    expert:settings.expert||'',responsible:settings.responsible||''};
 }
-function signLines(){
-  const out=[P('',{after:240})];
-  const add=(role,name)=>out.push(P((role||'')+' ______________ / '+(name||'')+' /',{after:200}));
-  const split=s=>{const m=(s||'').split(',');return [m[0]?.trim(),m.slice(1).join(',').trim()]};
-  return {out,add,split};
-}
-async function makeDoc(kind){
-  const list=selected();if(!list.length)return;
-  if(!D()){toast('Библиотека Word не загрузилась — нужен интернет');return}
-  const s=settings, A=D().AlignmentType;
-  const head=[
-    P(s.org,{al:A.CENTER,b:true}),
-    P(kind==='act'?'АКТ № '+(s.docNo||'___')+' о списании основных средств':'ЭКСПЕРТНОЕ ЗАКЛЮЧЕНИЕ № '+(s.docNo||'___')+' о техническом состоянии оборудования',{al:A.CENTER,b:true,sz:28}),
-    P((s.city||'')+(s.city&&s.date?', ':'')+(s.date||todayText()),{al:A.CENTER,after:120}),
-    ...(kind==='act'?[P('Центр затрат: '+(s.costCenter||'________')+'    Местонахождение: '+(s.location||'Birlik'),{after:240})]:[P('Местонахождение: '+(s.location||'Birlik'),{after:240})]),
-  ];
-  let body=[];
-  const rows=list.map((x,i)=>[String(i+1),x.asset,x.name,x.model,x.serial,x.year,x.cond]);
-  const cols=[['№',5],['Инв. номер',15],['Наименование',17],['Модель',17],['Серийный номер',17],['Год',8],['Состояние / причина',21]];
-  const sg=signLines();
-  if(kind==='act'){
-    body=[
-      P('Комиссия в составе:'+(s.basis?' ('+s.basis+')':'')+' Центр затрат: '+(s.costCenter||'________')+'. Местонахождение: '+(s.location||'Birlik')+'.'),
-      P('Председатель: '+(s.chair||'')),
-      ...(s.members||'').split('\n').filter(Boolean).map(m=>P('Член комиссии: '+m)),
-      P('провела осмотр нижеперечисленного оборудования и установила, что оно непригодно для дальнейшего использования и подлежит списанию:',{after:200}),
-      table(cols,rows),
-      P('',{after:120}),
-      P('Всего к списанию: '+list.length+' ед.',{b:true}),
-    ];
-    sg.add('Председатель комиссии',sg.split(s.chair)[1]);
-    (s.members||'').split('\n').filter(Boolean).forEach(m=>{const [r,n]=sg.split(m);sg.add(r,n)});
-  }else{
-    body=[
-      P('Эксперт: '+(s.expert||'')+(s.basis?' ('+s.basis+')':'')),
-      P('Мною проведена техническая экспертиза следующего оборудования:',{after:200}),
-      table(cols,rows),
-      P('',{after:120}),
-      P('Заключение: по результатам осмотра установлено, что указанное оборудование (всего '+list.length+' ед.) имеет неисправности / физический и моральный износ, восстановление нецелесообразно, оборудование подлежит списанию.'),
-    ];
-    const [r,n]=sg.split(s.expert);sg.add(r||'Эксперт',n);
-  }
-  const doc=new (D().Document)({sections:[{properties:{page:{size:{orientation:D().PageOrientation.LANDSCAPE},margin:{top:800,bottom:800,left:900,right:900}}},children:[...head,...body,...sg.out]}]});
-  dl(await D().Packer.toBlob(doc),(kind==='act'?'Акт':'Экспертное-заключение')+'-'+(s.docNo||'без-номера')+'.docx');
-  toast('Документ создан ✓');
-}
-/* ============ ЗАПОЛНЕНИЕ ОРИГИНАЛЬНЫХ EXCEL-ШАБЛОНОВ ============
-   Положите act.xlsx и zakluchenie.xlsx рядом с index.html в корне GitHub Pages.
-*/
-const TEMPLATE_ACT='act.xlsx';
-const TEMPLATE_EXP='zakluchenie.xlsx';
+
+/*==ENGINE_START==*/
+const colNum=l=>{let n=0;for(const ch of l)n=n*26+ch.charCodeAt(0)-64;return n};
+const colLetter=n=>{let s='';while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=(n-m-1)/26}return s};
 function dateForExcel(value){
   if(!value) return new Date();
+  if(value instanceof Date) return value;
   const m=String(value).match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
   if(m) return new Date(Number(m[3]),Number(m[2])-1,Number(m[1]));
   const d=new Date(value); return Number.isNaN(d.getTime())?new Date():d;
 }
-function dateRu(value){return dateForExcel(value).toLocaleDateString('ru-RU');}
-async function openTemplateZip(file){
-  if(!window.JSZip) throw new Error('Не загрузилась библиотека для сохранения Excel. Проверьте интернет-соединение.');
-  const response=await fetch(encodeURI(file));
-  if(!response.ok) throw new Error('Не найден файл «'+file+'». Загрузите его в ту же папку GitHub Pages, где находится index.html.');
-  // Меняем лишь XML первой страницы внутри архива. Все остальные части шаблона,
-  // включая стили, объединения, изображения, внешние ссылки и настройки печати,
-  // остаются нетронутыми. Это предотвращает предупреждение Excel о восстановлении.
-  return await JSZip.loadAsync(await response.arrayBuffer());
+function dateRu(value){
+  const d=dateForExcel(value);
+  const p=n=>String(n).padStart(2,'0');
+  return p(d.getDate())+'.'+p(d.getMonth()+1)+'.'+d.getFullYear();
 }
-// Приводит значения из браузерной базы/Google Sheets к обычному тексту.
 function excelText(value, seen=new Set()){
   if(value===undefined||value===null) return '';
   if(typeof value==='string') return value;
@@ -812,13 +994,9 @@ function excelText(value, seen=new Set()){
     if(seen.has(value)) return '';
     seen.add(value);
     for(const key of ['text','value','displayValue','formattedValue','label','name','result','v']){
-      if(value[key]!==undefined&&value[key]!==null&&value[key]!==value){
-        const text=excelText(value[key],seen);
-        if(text) return text;
-      }
+      if(value[key]!==undefined&&value[key]!==null&&value[key]!==value){const t=excelText(value[key],seen);if(t) return t}
     }
-    if(Array.isArray(value.richText)) return value.richText.map(bit=>excelText(bit&&bit.text!==undefined?bit.text:bit,seen)).filter(Boolean).join('');
-    return Object.keys(value).filter(k=>!['id','key','type','metadata'].includes(k)).map(k=>excelText(value[k],seen)).filter(Boolean).join(' ');
+    return '';
   }
   return String(value);
 }
@@ -826,96 +1004,279 @@ function xmlEscape(value){
   return String(value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'')
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
-// Обновляет значение одной ячейки, сохраняя все её стилевые атрибуты.
-// Строки записываются как inline strings — не меняем sharedStrings.xml и другие листы.
-function setWorksheetCell(xml, address, value){
-  const safeAddress=address.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  const re=new RegExp('<c\\b(?=[^>]*\\br="'+safeAddress+'")[^>]*?(?:\\/>|>[\\s\\S]*?<\\/c>)');
-  const found=xml.match(re);
-  if(!found) throw new Error('В шаблоне не найдена ячейка '+address+'. Проверьте исходный Excel-файл.');
-  const fragment=found[0];
-  const gt=fragment.indexOf('>');
-  let opening=fragment.slice(0,gt).replace(/\/$/,'');
-  opening=opening.replace(/\s+t="[^"]*"/,'');
-  let replacement;
-  if(value===undefined||value===null||value===''){
-    // Сохраняем формат ячейки, но убираем старый текст полностью.
-    replacement=opening+'/>';
-  }else if(typeof value==='number'&&Number.isFinite(value)){
-    replacement=opening+'><v>'+String(value)+'</v></c>';
-  }else{
-    replacement=opening+' t="inlineStr"><is><t xml:space="preserve">'+xmlEscape(excelText(value))+'</t></is></c>';
-  }
-  return xml.replace(fragment,replacement);
-}
-async function writeTemplateCells(zip, cells){
-  const path='xl/worksheets/sheet1.xml';
-  const entry=zip.file(path);
-  if(!entry) throw new Error('В Excel-шаблоне не найден основной лист.');
-  let xml=await entry.async('string');
-  for(const [address,value] of Object.entries(cells)) xml=setWorksheetCell(xml,address,value);
-  zip.file(path,xml);
-}
 function fileSafe(s){return String(s||'без-номера').replace(/[\\/:*?"<>|\s]+/g,'-').slice(0,80)}
-async function makeExcelTemplate(kind){
-  try {
-    const list=selected(); if(!list.length)return;
-    if(kind==='exp'&&list.length!==1){toast('Для экспертного заключения выберите ровно одно устройство.');return;}
-    if(kind==='act'&&list.length>3){toast('В шаблоне акта предусмотрено 3 строки. Выберите не более 3 устройств.');return;}
-    const s=settings||{}; const zip=await openTemplateZip(kind==='act'?TEMPLATE_ACT:TEMPLATE_EXP);
-    const date=dateForExcel(s.date||todayText());
-    const cells={};
-    const put=(address,value)=>{cells[address]=value===undefined||value===null?'':value;};
-    if(kind==='act'){
-      // Дата и центр затрат находятся под своими подписями, отдельно от заголовков.
-      put('H8',dateRu(date));
-      put('J8',s.costCenter||'');
-      list.forEach((x,i)=>{
-        const r=23+i;
-        put('B'+r,[excelText(x.name),excelText(x.model)].filter(Boolean).join(' — '));
-        put('E'+r,s.location||'Birlik');
-        put('F'+r,excelText(x.serial));
-        put('G'+r,excelText(x.asset));
-        put('H'+r,excelText(x.year));
-        put('I'+r,excelText(x.year));
-        const priceText=excelText(x.price);
-        if(priceText){const n=Number(priceText.replace(/\s/g,'').replace(',','.'));if(Number.isFinite(n))put('J'+r,n);}
-      });
-      const reasons=list.map(x=>excelText(x.cond)).filter(Boolean).join('; ');
-      put('E27',reasons); put('E28',reasons); put('E29','Оборудование подлежит списанию.');
-      // Участники комиссии берутся из выбранных значений во вкладке «Документы».
-      const committeeMembers=String(s.members||'').split('\n').map(v=>v.trim()).filter(Boolean);
-      put('G31',s.chair||''); put('K31','Camp Manager');
-      put('G33',committeeMembers[0]||'');
-      put('G35',s.expert||EXPERTS[0]);
-      put('G37',committeeMembers[1]||''); put('K37','');
-      // Поле «Number of document and date» оставляем пустым, включая область значения.
-      put('D42',''); put('E42','');
-    } else {
-      const x=list[0];
-      put('B10',[excelText(x.name),excelText(x.model)].filter(Boolean).join(' — '));
-      put('E10',excelText(x.maker));
-      put('F10',excelText(x.serial));
-      put('G10',excelText(x.year));
-      put('J10',s.location||'Birlik');
-      put('L10',excelText(x.asset));
-      const condition=excelText(x.cond)||'Техническое состояние требует оценки специалистом.';
-      put('B17',condition);
-      put('B23',condition);
-      put('B29','Затраты на восстановление составляют 60-70% от стоимости оборудования.');
-      put('B35','Ремонт экономически нецелесообразен. Рекомендуется списание.');
-      // Только один выбранный эксперт — первая строка. Вторая и третья строки пустые.
-      put('D39',s.expert||EXPERTS[0]); put('L39',dateRu(date));
-      put('D41',''); put('L41','');
-      put('D43',''); put('L43','');
+
+/* Разбор листа в строки/ячейки: так можно вставлять и удалять строки, сохраняя стили, объединения и печать. */
+function parseSheetXml(xml){
+  const a=xml.indexOf('<sheetData'), b=xml.indexOf('</sheetData>');
+  if(a<0||b<0)throw new Error('Не удалось прочитать лист шаблона.');
+  const m={head:xml.slice(0,a),rows:[],merges:[],tailPre:'',tailPost:''};
+  const body=xml.slice(xml.indexOf('>',a)+1,b);
+  const rowRe=/<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g; let rm;
+  while((rm=rowRe.exec(body))){
+    const attrs=rm[1], inner=rm[2]||'', rr=/\br="(\d+)"/.exec(attrs);
+    if(!rr)continue;
+    const cells=[], cRe=/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g; let c;
+    while((c=cRe.exec(inner))){
+      const ref=/\br="([A-Z]+)\d+"/.exec(c[1]);
+      if(ref)cells.push({col:ref[1],attrs:c[1].replace(/\s*\br="[A-Z]+\d+"/,''),inner:c[2]||''});
     }
-    await writeTemplateCells(zip,cells);
-    const buffer=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
-    const url=URL.createObjectURL(buffer), a=document.createElement('a');
-    a.href=url; a.download=(kind==='act'?'Акт-списания-':'Заключение-экспертов-')+fileSafe(s.docNo||date.toISOString().slice(0,10))+'.xlsx';
-    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
-    toast('Excel-документ создан по исходному шаблону ✓');
-  } catch(e){console.error(e);toast(e.message||'Не удалось сформировать Excel-файл.');}
+    m.rows.push({r:+rr[1],attrs:attrs.replace(/\s*\br="\d+"/,''),cells});
+  }
+  const tail=xml.slice(b+'</sheetData>'.length);
+  const mc=/<mergeCells\b[^>]*>([\s\S]*?)<\/mergeCells>/.exec(tail);
+  if(mc){
+    m.tailPre=tail.slice(0,mc.index);m.tailPost=tail.slice(mc.index+mc[0].length);
+    const re=/<mergeCell\b[^>]*?ref="([A-Z]+)(\d+):([A-Z]+)(\d+)"[^>]*\/>/g; let x;
+    while((x=re.exec(mc[1])))m.merges.push({a:x[1],r1:+x[2],b:x[3],r2:+x[4]});
+  }else m.tailPre=tail;
+  return m;
+}
+function serializeSheetXml(m){
+  let maxR=1,maxC=1;
+  const body=[...m.rows].sort((x,y)=>x.r-y.r).map(rw=>{
+    const cells=rw.cells.slice().sort((p,q)=>colNum(p.col)-colNum(q.col)).map(c=>{
+      maxC=Math.max(maxC,colNum(c.col));
+      return '<c r="'+c.col+rw.r+'"'+c.attrs+(c.inner?'>'+c.inner+'</c>':'/>');
+    }).join('');
+    maxR=Math.max(maxR,rw.r);
+    return '<row r="'+rw.r+'"'+rw.attrs+'>'+cells+'</row>';
+  }).join('');
+  const head=m.head.replace(/<dimension\b[^>]*\/>/,'<dimension ref="A1:'+colLetter(maxC)+maxR+'"/>');
+  const mc=m.merges.length?'<mergeCells count="'+m.merges.length+'">'+m.merges.map(g=>'<mergeCell ref="'+g.a+g.r1+':'+g.b+g.r2+'"/>').join('')+'</mergeCells>':'';
+  return head+'<sheetData>'+body+'</sheetData>'+m.tailPre+mc+m.tailPost;
+}
+const rowOf=(m,r)=>m.rows.find(x=>x.r===r);
+function insertRows(m,after,count,srcRows){
+  const tpl=srcRows.map(r=>{
+    const rw=rowOf(m,r);if(!rw)throw new Error('В шаблоне нет строки '+r+'.');
+    return {rw:JSON.parse(JSON.stringify(rw)),mg:m.merges.filter(g=>g.r1===r&&g.r2===r).map(g=>({a:g.a,b:g.b}))};
+  });
+  m.rows.forEach(rw=>{if(rw.r>after)rw.r+=count});
+  m.merges.forEach(g=>{if(g.r1>after){g.r1+=count;g.r2+=count}});
+  for(let k=0;k<count;k++){
+    const t=tpl[k%tpl.length], nr=after+1+k, c=JSON.parse(JSON.stringify(t.rw));
+    c.r=nr;c.cells.forEach(x=>{x.inner='';x.attrs=x.attrs.replace(/\s+t="[^"]*"/,'')});
+    m.rows.push(c);
+    t.mg.forEach(g=>m.merges.push({a:g.a,b:g.b,r1:nr,r2:nr}));
+  }
+}
+function deleteRows(m,first,last){
+  const n=last-first+1;
+  m.rows=m.rows.filter(rw=>rw.r<first||rw.r>last);
+  m.rows.forEach(rw=>{if(rw.r>last)rw.r-=n});
+  m.merges=m.merges.filter(g=>!(g.r1>=first&&g.r2<=last));
+  m.merges.forEach(g=>{if(g.r1>last){g.r1-=n;g.r2-=n}});
+}
+function setCell(m,ref,value){
+  const [,col,rn]=/^([A-Z]+)(\d+)$/.exec(ref), r=+rn;
+  let row=rowOf(m,r);
+  if(!row){row={r,attrs:'',cells:[]};m.rows.push(row)}
+  let cell=row.cells.find(c=>c.col===col);
+  if(!cell){cell={col,attrs:'',inner:''};row.cells.push(cell)}
+  const attrs=cell.attrs.replace(/\s+t="[^"]*"/,'');
+  if(value===undefined||value===null||value===''){cell.attrs=attrs;cell.inner=''}
+  else if(typeof value==='number'&&Number.isFinite(value)){cell.attrs=attrs;cell.inner='<v>'+value+'</v>'}
+  else{cell.attrs=attrs+' t="inlineStr"';cell.inner='<is><t xml:space="preserve">'+xmlEscape(excelText(value))+'</t></is>'}
+}
+function setRowHeight(row,h){row.attrs=row.attrs.replace(/\s+ht="[^"]*"/,'').replace(/\s+customHeight="[^"]*"/,'')+' ht="'+h+'" customHeight="1"'}
+// Копия существующего формата ячейки, но с переносом текста (для длинных названий)
+function addWrapStyle(stylesXml,baseIdx){
+  const m=/<cellXfs\b[^>]*>([\s\S]*?)<\/cellXfs>/.exec(stylesXml);
+  if(!m)return null;
+  const xfs=m[1].match(/<xf\b[^>]*?(?:\/>|>[\s\S]*?<\/xf>)/g)||[];
+  if(baseIdx>=xfs.length)return null;
+  const al='<alignment horizontal="left" vertical="center" wrapText="1"/>';
+  let x=xfs[baseIdx].replace(/<alignment\b[^>]*\/>/,'');
+  x=(/<\/xf>\s*$/.test(x))?x.replace(/<\/xf>\s*$/,al+'</xf>'):x.replace(/\/>\s*$/,'>'+al+'</xf>');
+  x=x.replace(/\sapplyAlignment="[^"]*"/,'').replace(/^<xf\b/,'<xf applyAlignment="1"');
+  const idx=xfs.length;
+  const block=m[0].replace(/(<cellXfs\b[^>]*?)count="\d+"/,'$1count="'+(idx+1)+'"').replace('</cellXfs>',x+'</cellXfs>');
+  return {xml:stylesXml.replace(m[0],block),idx};
+}
+const gen=zip=>zip.generateAsync({type:'uint8array',compression:'DEFLATE',compressionOptions:{level:6}});
+
+async function buildActXlsx(buf,list,s,posOf){
+  const zip=await JSZip.loadAsync(buf);
+  const sp='xl/worksheets/sheet1.xml', wbp='xl/workbook.xml', stp='xl/styles.xml';
+  if(!zip.file(sp))throw new Error('В шаблоне акта не найден основной лист.');
+  const m=parseSheetXml(await zip.file(sp).async('string'));
+  [23,24,25,26,27,31,33,34,35,36,37].forEach(r=>{if(!rowOf(m,r))throw new Error('Структура шаблона акта изменилась (нет строки '+r+'). Файл не заполнен — проверьте act.xlsx.')});
+  if(!m.merges.some(g=>g.a==='E'&&g.b==='M'&&g.r1===27))throw new Error('Это не шаблон акта (нет ожидаемых объединённых ячеек). Проверьте файл act.xlsx.');
+  let stylesXml=zip.file(stp)?await zip.file(stp).async('string'):null, wrap=null;
+  const b24=rowOf(m,24).cells.find(c=>c.col==='B');
+  if(stylesXml&&b24){const sm=/\ss="(\d+)"/.exec(b24.attrs);if(sm){wrap=addWrapStyle(stylesXml,+sm[1]);if(wrap)stylesXml=wrap.xml}}
+  const N=list.length, dev=N-3;
+  if(N>3)insertRows(m,25,N-3,[25]); else if(N<3)deleteRows(m,23+N,25);
+  const R=r=>r>25?r+dev:r;
+  const crew=[...(s.members||[])];if(s.expert&&!crew.includes(s.expert))crew.push(s.expert);
+  const extra=crew.length>2?2*(crew.length-2):0;
+  if(extra)insertRows(m,R(36),extra,[R(35),R(36)]);
+  const RC=r=>R(r)+(r>36?extra:0);
+  const put=(ref,v)=>setCell(m,ref,v), date=dateRu(s.date);
+  put('H8',date);put('J8',s.costCenter||'');put('K8',s.responsible||'');
+  list.forEach((x,i)=>{
+    const r=23+i, d=[excelText(x.name),excelText(x.model)].filter(Boolean).join(' — ');
+    put('A'+r,i+1);put('B'+r,d);
+    if(wrap&&d.length>58){
+      const row=rowOf(m,r),c=row.cells.find(z=>z.col==='B');
+      c.attrs=/\ss="\d+"/.test(c.attrs)?c.attrs.replace(/\ss="\d+"/,' s="'+wrap.idx+'"'):c.attrs+' s="'+wrap.idx+'"';
+      setRowHeight(row,d.length>116?48:36);
+    }
+    put('E'+r,s.location||'Birlik');
+    put('F'+r,excelText(x.serial));put('G'+r,excelText(x.asset));
+    put('H'+r,excelText(x.year));put('I'+r,excelText(x.year));
+    const pt=excelText(x.price).trim(), n=Number(pt.replace(/\s/g,'').replace(',','.'));
+    put('J'+r,pt?(Number.isFinite(n)?n:pt):'');
+  });
+  const reasons=[...new Set(list.map(x=>excelText(x.cond).trim()).filter(Boolean))].join('; ');
+  put('E'+R(27),reasons);put('E'+R(28),reasons);put('E'+R(29),'Оборудование подлежит списанию.');
+  const chair=s.chair||'';
+  put('G'+R(31),chair);put('K'+R(31),chair?(posOf(chair)||DEFAULT_CHAIR_POSITION):'');
+  for(let i=0;i<Math.max(2,crew.length);i++){
+    const r=R(33)+2*i, n=crew[i]||'';
+    put('G'+r,n);put('K'+r,n?(posOf(n)||''):'');
+  }
+  put('G'+RC(37),s.responsible||'');put('K'+RC(37),s.responsible?(posOf(s.responsible)||''):'');
+  put('D'+RC(42),'');put('E'+RC(42),s.docNo?('№ '+s.docNo+' от '+date):'');
+  zip.file(sp,serializeSheetXml(m));
+  if(wrap)zip.file(stp,stylesXml);
+  const delta=dev+extra;
+  if(delta&&zip.file(wbp)){
+    const wb=await zip.file(wbp).async('string');
+    zip.file(wbp,wb.replace(/(<definedName\b[^>]*name="_xlnm\.Print_Area"[^>]*>[^<]*?\$)(\d+)(<\/definedName>)/,(x,a,n,b)=>a+(+n+delta)+b));
+  }
+  return gen(zip);
+}
+async function buildExpXlsx(buf,x,s){
+  const zip=await JSZip.loadAsync(buf);
+  const sp='xl/worksheets/sheet1.xml';
+  if(!zip.file(sp))throw new Error('В шаблоне заключения не найден основной лист.');
+  const m=parseSheetXml(await zip.file(sp).async('string'));
+  [10,17,23,29,35,39].forEach(r=>{if(!rowOf(m,r))throw new Error('Структура шаблона заключения изменилась (нет строки '+r+'). Файл не заполнен — проверьте zakluchenie.xlsx.')});
+  if(!m.merges.some(g=>g.a==='B'&&g.b==='D'&&g.r1===10))throw new Error('Это не шаблон заключения (нет ожидаемых объединённых ячеек). Проверьте файл zakluchenie.xlsx.');
+  const put=(ref,v)=>setCell(m,ref,v);
+  put('B10',[excelText(x.name),excelText(x.model)].filter(Boolean).join(' — '));
+  put('E10',excelText(x.maker));put('F10',excelText(x.serial));put('G10',excelText(x.year));
+  put('J10',s.location||'Birlik');put('L10',excelText(x.asset));
+  const condition=excelText(x.cond).trim()||'Техническое состояние требует оценки специалистом.';
+  put('B17',condition);put('B23',condition);
+  put('B29','Затраты на восстановление составляют 60-70% от стоимости оборудования.');
+  put('B35','Ремонт экономически нецелесообразен. Рекомендуется списание.');
+  put('D39',s.expert||'');put('L39',dateRu(s.date));
+  put('D41','');put('L41','');put('D43','');put('L43','');
+  zip.file(sp,serializeSheetXml(m));
+  return gen(zip);
+}
+
+/* Таблица устройств в Excel: нормальные форматы, ширины, фильтр, закреплённая шапка, итог */
+async function buildListXlsx(o){
+  const xe=xmlEscape, cols=o.cols, nC=cols.length, L=colLetter(nC), rows=o.rows, lastRow=4+rows.length;
+  const st=(s,t)=>'<c s="'+s+'" t="inlineStr"><is><t xml:space="preserve">'+xe(t)+'</t></is></c>';
+  const cell=(ref,s,t)=>st(s,t).replace('<c ','<c r="'+ref+'" ');
+  let sd='<row r="1" ht="26" customHeight="1">'+cell('A1',8,o.title)+'</row>'
+        +'<row r="2" ht="18" customHeight="1">'+cell('A2',9,o.sub)+'</row>'
+        +'<row r="4" ht="32" customHeight="1">'+cols.map((c,i)=>cell(colLetter(i+1)+'4',1,c.h)).join('')+'</row>';
+  let sum=0;
+  rows.forEach((x,ri)=>{
+    const r=5+ri, z=ri%2;
+    sd+='<row r="'+r+'">'+cols.map((c,i)=>{
+      const ref=colLetter(i+1)+r, v=c.k==='#'?ri+1:x[c.k];
+      if(c.t==='i')return '<c r="'+ref+'" s="'+(12+z)+'"><v>'+v+'</v></c>';
+      if(c.t==='m'){
+        const t=excelText(v).trim(), n=Number(t.replace(/\s/g,'').replace(',','.'));
+        if(t&&Number.isFinite(n)){sum+=n;return '<c r="'+ref+'" s="'+(4+z)+'"><v>'+n+'</v></c>'}
+        return cell(ref,2+z,t);
+      }
+      return cell(ref,(c.t==='c'?6:2)+z,excelText(v));
+    }).join('')+'</row>';
+  });
+  const mi=cols.findIndex(c=>c.t==='m');
+  if(mi>0&&rows.length){
+    const r=lastRow+1;
+    sd+='<row r="'+r+'" ht="22" customHeight="1">'+cols.map((c,i)=>{
+      const ref=colLetter(i+1)+r;
+      if(i===mi)return '<c r="'+ref+'" s="11"><f>SUM('+colLetter(mi+1)+'5:'+colLetter(mi+1)+lastRow+')</f><v>'+sum+'</v></c>';
+      if(i===mi-1)return cell(ref,10,'Итого:');
+      return '<c r="'+ref+'" s="10"/>';
+    }).join('')+'</row>';
+  }
+  const sheet='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+    +'<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>'
+    +'<sheetViews><sheetView showGridLines="0" workbookViewId="0"><pane ySplit="4" topLeftCell="A5" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A5" sqref="A5"/></sheetView></sheetViews>'
+    +'<sheetFormatPr defaultRowHeight="15"/>'
+    +'<cols>'+cols.map((c,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+c.w+'" customWidth="1"/>').join('')+'</cols>'
+    +'<sheetData>'+sd+'</sheetData>'
+    +'<autoFilter ref="A4:'+L+lastRow+'"/>'
+    +'<mergeCells count="2"><mergeCell ref="A1:'+L+'1"/><mergeCell ref="A2:'+L+'2"/></mergeCells>'
+    +'<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>'
+    +'<pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>';
+  const bd='<border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border>';
+  const xf=(num,font,fill,border,h,wrap)=>'<xf numFmtId="'+num+'" fontId="'+font+'" fillId="'+fill+'" borderId="'+border+'" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="'+h+'" vertical="center"'+(wrap?' wrapText="1"':'')+'/></xf>';
+  const styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+    +'<numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.00"/></numFmts>'
+    +'<fonts count="5"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Arial"/></font><font><b/><sz val="14"/><name val="Arial"/></font><font><i/><sz val="9"/><color rgb="FF666666"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts>'
+    +'<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1F4E78"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEAF1F8"/><bgColor indexed="64"/></patternFill></fill></fills>'
+    +'<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>'+bd+'</borders>'
+    +'<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+    +'<cellXfs count="14">'
+    +'<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+    +xf(0,1,2,1,'center',true)                                  // 1 шапка
+    +xf(49,0,0,1,'left',true)+xf(49,0,3,1,'left',true)          // 2,3 текст
+    +xf(164,0,0,1,'right',false)+xf(164,0,3,1,'right',false)    // 4,5 деньги
+    +xf(49,0,0,1,'center',true)+xf(49,0,3,1,'center',true)      // 6,7 по центру
+    +xf(0,2,0,0,'left',false)+xf(0,3,0,0,'left',false)          // 8 заголовок, 9 подзаголовок
+    +xf(0,4,3,1,'right',false)+xf(164,4,3,1,'right',false)      // 10,11 итого
+    +xf(0,0,0,1,'center',false)+xf(0,0,3,1,'center',false)      // 12,13 номер
+    +'</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  const wb='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Устройства" sheetId="1" r:id="rId1"/></sheets>'
+    +'<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">\'Устройства\'!$A$4:$'+L+'$'+lastRow+'</definedName><definedName name="_xlnm.Print_Titles" localSheetId="0">\'Устройства\'!$4:$4</definedName></definedNames></workbook>';
+  const zip=new JSZip();
+  zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
+  zip.file('_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+  zip.file('xl/workbook.xml',wb);
+  zip.file('xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
+  zip.file('xl/styles.xml',styles);
+  zip.file('xl/worksheets/sheet1.xml',sheet);
+  return gen(zip);
+}
+/*==ENGINE_END==*/
+
+async function fetchTemplate(file){
+  const resp=await fetch(encodeURI(file),{cache:'no-cache'});
+  if(!resp.ok)throw new Error('Не найден файл «'+file+'». Загрузите его в ту же папку GitHub Pages, где лежит index.html.');
+  return await resp.arrayBuffer();
+}
+function saveBytes(bytes,name,mime){
+  const url=URL.createObjectURL(new Blob([bytes],{type:mime||XLSX_MIME})), a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+async function makeExcelTemplate(kind){
+  try{
+    if(!window.JSZip)throw new Error('Не загрузилась библиотека для Excel. Проверьте интернет-соединение.');
+    const list=selected();if(!list.length)return;
+    const s=currentDocSettings();
+    if(kind==='exp'&&!s.expert){toast('Выберите эксперта в списке «Эксперт».');return}
+    const buf=await fetchTemplate(kind==='act'?TEMPLATE_ACT:TEMPLATE_EXP);
+    const stamp=fileSafe(s.docNo||dateRu(s.date));
+    if(kind==='act'){
+      saveBytes(await buildActXlsx(buf,list,s,posOf),'Акт-списания-'+stamp+'.xlsx');
+      toast('Акт создан по шаблону ✓ Устройств: '+list.length);
+    }else if(list.length===1){
+      saveBytes(await buildExpXlsx(buf,list[0],s),'Заключение-экспертов-'+fileSafe(list[0].asset||list[0].serial||stamp)+'.xlsx');
+      toast('Заключение создано по шаблону ✓');
+    }else{
+      // одно заключение на каждое устройство (как в шаблоне), все файлы — одним архивом
+      const out=new JSZip(), used=new Set();
+      for(let i=0;i<list.length;i++){
+        let nm='Заключение-'+fileSafe(list[i].asset||list[i].serial||('устройство-'+(i+1)));
+        while(used.has(nm))nm+='_'+(i+1);used.add(nm);
+        out.file(nm+'.xlsx',await buildExpXlsx(buf,list[i],s));
+      }
+      saveBytes(await out.generateAsync({type:'uint8array',compression:'DEFLATE'}),'Заключения-экспертов-'+stamp+'.zip','application/zip');
+      toast('Готово: '+list.length+' заключений в одном архиве ✓');
+    }
+  }catch(e){console.error(e);toast(e.message||'Не удалось сформировать Excel-файл.')}
 }
 $('#mkAct').onclick=()=>makeExcelTemplate('act');
 $('#mkExp').onclick=()=>makeExcelTemplate('exp');
