@@ -7,6 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root{--bg:#f5f6f8;--card:#fff;--tx:#1b1f24;--mut:#667;--ac:#1a56db;--bd:#d9dde3;--ok:#0a7d3b;--bad:#c0262d}
   @media (prefers-color-scheme:dark){:root{--bg:#14171a;--card:#1d2126;--tx:#e8eaed;--mut:#9aa3ad;--ac:#6ea0ff;--bd:#323941}}
@@ -85,6 +86,9 @@
   .mini button{padding:4px 10px;font-size:13px;border:1px solid var(--bd);border-radius:14px;background:var(--bg);color:var(--ac);cursor:pointer}
   .badge{display:inline-block;padding:1px 9px;border-radius:10px;font-size:12px;font-weight:600;color:#fff;background:var(--bad);vertical-align:middle}
   .badge.on{background:#1aa34a}
+  /* Wi-Fi: цвета статусов */
+  .badge.soon{background:#b7791f}.badge.exp{background:#c0262d}.badge.rev{background:#7c3aed}
+  #tab-wifi .item button{border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);cursor:pointer}
   /* на узком экране вкладки переносятся на 2 строки — все видны сразу, без прокрутки вбок */
   @media(max-width:700px){header{flex-wrap:wrap;overflow-x:visible}header button{flex:1 1 30%;min-width:0;white-space:normal}}
 </style>
@@ -95,6 +99,7 @@
   <button data-tab="list">📋 Список (<span id="cnt">0</span>)</button>
   <button data-tab="docs">📄 Документы</button>
   <button data-tab="users" class="adm">👥 Пользователи</button>
+  <button data-tab="wifi">📶 Wi-Fi</button>
   <button data-tab="data">💾 Данные</button>
 </header>
 <main>
@@ -190,6 +195,35 @@
     </div>
     <p class="small" id="size"></p>
     <div class="btns"><button class="btn del" id="wipe">Очистить на этом устройстве</button></div>
+  </div>
+</section>
+
+<!-- WI-FI -->
+<section id="tab-wifi" class="hide">
+  <div class="card">
+    <h2>Wi-Fi: загрузка отчётов приёмной</h2>
+    <p class="small">Читается только лист «Wi-Fi». «Bottled Water» игнорируется. Можно выбрать несколько файлов; повторная загрузка дубликатов не создаёт.</p>
+    <input type="file" id="wfFiles" accept=".xlsx" multiple>
+    <p class="small" id="wfLog"></p>
+    <div class="btns"><button class="btn sec" id="wfExp">⬇️ Копия реестра (.json)</button><button class="btn sec" id="wfImpBtn">⬆️ Загрузить копию</button><input type="file" id="wfImp" accept=".json,application/json" class="hide"></div>
+  </div>
+  <div class="card hide" id="wfConf"></div>
+  <div class="card">
+    <h2>Реестр аккаунтов (<span id="wfN">0</span>)</h2>
+    <input id="wfQ" placeholder="Поиск: комната, здание, спонсор, дата…">
+    <div class="row" style="margin-top:6px">
+      <select id="wfSt"><option value="">Все статусы</option><option value="active">Active</option><option value="soon">Expiring Soon</option><option value="expired">Expired</option><option value="review">Needs Review</option></select>
+      <select id="wfSort"><option value="room">Сорт.: комната</option><option value="end">Сорт.: окончание</option><option value="start">Сорт.: начало</option><option value="sponsor">Сорт.: спонсор</option></select>
+    </div>
+    <label style="display:flex;gap:10px;align-items:center;color:var(--tx)"><input type="checkbox" id="wfAll" style="width:22px;height:22px"> Выбрать все показанные</label>
+    <div id="wfList"></div>
+  </div>
+  <div class="card">
+    <h2>Отчёт (выбрано: <span id="wfSelN">0</span>)</h2>
+    <label>Месяц отчёта</label><input type="month" id="wfM">
+    <div id="wfPrev"></div>
+    <label id="wfOkRow" class="hide" style="display:flex;gap:10px;align-items:center;color:var(--tx)"><input type="checkbox" id="wfOk" style="width:22px;height:22px"> Предупреждения (⚠) проверены, продолжить</label>
+    <div class="btns"><button class="btn" id="wfGo">Сформировать отчёт (.xlsx)</button></div>
   </div>
 </section>
 
@@ -493,7 +527,7 @@ $('#dictTypes').onclick=()=>openDictModal('types');
 let usersTimer=null;
 document.querySelectorAll('header button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('header button').forEach(x=>x.classList.toggle('on',x===b));
-  ['add','list','docs','users','data'].forEach(t=>$('#tab-'+t).classList.toggle('hide',t!==b.dataset.tab));
+  ['add','list','docs','users','wifi','data'].forEach(t=>$('#tab-'+t).classList.toggle('hide',t!==b.dataset.tab));
   if(usersTimer){clearInterval(usersTimer);usersTimer=null}
   if(b.dataset.tab==='list')renderList();
   if(b.dataset.tab==='docs'){
@@ -502,6 +536,7 @@ document.querySelectorAll('header button').forEach(b=>b.onclick=()=>{
     if(sess)loadDict(true);
   }
   if(b.dataset.tab==='users'){renderUsers();usersTimer=setInterval(()=>{if(!document.hidden)renderUsers(true)},30000)}
+  if(b.dataset.tab==='wifi'){wfRender();wfPull().then(wfRender)}
   if(b.dataset.tab==='data')showSize();
 });
 
@@ -1298,6 +1333,302 @@ async function makeExcelTemplate(kind){
 }
 $('#mkAct').onclick=()=>makeExcelTemplate('act');
 $('#mkExp').onclick=()=>makeExcelTemplate('exp');
+
+/*==WIFI_CORE_START==*/
+/* Wi-Fi registry core: pure logic (no DOM). Dates are ISO yyyy-mm-dd strings; day counts are inclusive. */
+const WF_SOON=3;            // "Expiring Soon" = 0..3 days left (adjustable)
+const WF_ACTIVE_KEY=()=>'wifi_registry_v1_'+(sess?sess.login:'');
+const wfDn=s=>{const [y,m,d]=s.split('-').map(Number);return Math.round(Date.UTC(y,m-1,d)/864e5)};
+const wfRu=s=>s?s.split('-').reverse().join('.'):'—';
+const wfNorm=h=>String(h==null?'':h).toLowerCase().replace(/\s+/g,' ').replace(/ date & time/,'').trim();
+const WF_COLS={sponsor:['sponsor'],employer:['employer'],start:['arrived on','wifi active from'],end:['departs on','wifi active to'],building:['building'],roomClass:['room class'],roomBed:['room/bed']};
+const wfToday=()=>{const t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')};
+function wfDate(v){
+  if(v===null||v===undefined||String(v).trim()==='')return null;
+  let y,m,d;
+  if(typeof v==='number'){const t=new Date(Math.floor(v)*864e5+Date.UTC(1899,11,30));y=t.getUTCFullYear();m=t.getUTCMonth()+1;d=t.getUTCDate()}
+  else{const s=String(v).trim();let k=s.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4})$/);
+    if(k){d=+k[1];m=+k[2];y=+k[3]}else if(k=s.match(/^(\d{4})-(\d{2})-(\d{2})$/)){y=+k[1];m=+k[2];d=+k[3]}else return null}
+  const t=new Date(Date.UTC(y,m-1,d));
+  if(t.getUTCFullYear()!==y||t.getUTCMonth()!==m-1||t.getUTCDate()!==d)return null;
+  return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+}
+function wfSplit(rb){const m=String(rb).match(/^([^\/]*)\/(.*)$/);return m?{room:m[1],bed:m[2]}:{room:String(rb),bed:null}}
+const wfIsDateFlag=f=>/^(Нет даты|Некорректная дата|Дата окончания)/.test(f);
+function wfFlags(r){
+  const f=[];
+  if(!r.start)f.push(r.rawStart?'Некорректная дата начала «'+r.rawStart+'»':'Нет даты начала');
+  if(!r.end)f.push(r.rawEnd?'Некорректная дата окончания «'+r.rawEnd+'»':'Нет даты окончания');
+  if(r.start&&r.end&&wfDn(r.end)<wfDn(r.start))f.push('Дата окончания раньше начала');
+  if(!/^A\d+$/.test(r.building))f.push(r.building?'Здание «'+r.building+'» не в формате A##':'Нет здания');
+  if(!r.room)f.push('Нет комнаты');
+  else if(r.building&&!r.room.startsWith(r.building))f.push('Комната «'+r.roomBed+'» не соответствует зданию '+r.building);
+  if(r.bed===null)f.push('Не указана кровать (A/B)');
+  else if(r.bed!=='A'&&r.bed!=='B')f.push('Недопустимая кровать «'+r.bed+'»');
+  return f;
+}
+const wfKey=r=>[r.building,r.roomBed,r.start||'raw:'+r.rawStart,r.end||'raw:'+r.rawEnd].join('|');
+const wfUid=()=>'w'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+// rows = sheet_to_json(header:1, raw:true). Headers are matched by name only; missing column = error.
+function wfParse(rows,file){
+  if(!rows.length)throw new Error('Пустой лист Wi-Fi');
+  const hdr=rows[0].map(wfNorm),ix={},miss=[];
+  for(const k in WF_COLS){ix[k]=hdr.findIndex(h=>WF_COLS[k].includes(h));if(ix[k]<0)miss.push(k)}
+  if(miss.length)throw new Error('Не найдены колонки: '+miss.join(', ')+'. Есть: '+rows[0].join(' | '));
+  const out=[],at=new Date().toISOString();
+  rows.slice(1).forEach((r,i)=>{
+    if(!r||r.every(c=>c===null||c===undefined||String(c).trim()===''))return;
+    const g=k=>{const v=r[ix[k]];return v==null?'':String(v).trim()};
+    const rawS=r[ix.start]==null?'':String(r[ix.start]),rawE=r[ix.end]==null?'':String(r[ix.end]);
+    const sp=wfSplit(g('roomBed'));
+    const rec={id:wfUid(),sponsor:g('sponsor'),employer:g('employer'),start:wfDate(r[ix.start]),end:wfDate(r[ix.end]),rawStart:rawS,rawEnd:rawE,
+      building:g('building'),roomClass:g('roomClass'),roomBed:g('roomBed'),room:sp.room,bed:sp.bed,
+      warn:[],conflicts:[],sources:[{file,row:i+2,at}],history:[]};
+    rec.flags=wfFlags(rec);out.push(rec);
+  });
+  return out;
+}
+function wfIngest(reg,recs){
+  const res={added:0,dup:0,conflict:0,skipped:0};
+  for(const n of recs){
+    const key=wfKey(n);
+    if(reg.rejected.includes(key)){res.skipped++;continue}
+    const same=reg.recs.find(r=>wfKey(r)===key);
+    if(same){
+      const s=n.sources[0];
+      if(!same.sources.some(x=>x.file===s.file&&x.row===s.row))same.sources.push(s);
+      [['sponsor','спонсор'],['employer','работодатель'],['roomClass','класс комнаты']].forEach(([k,l])=>{
+        if(same[k]!==n[k]){const w='«'+s.file+'»: '+l+' «'+n[k]+'» ≠ «'+same[k]+'» — проверьте, та же ли это запись';
+          if(!same.warn.includes(w))same.warn.push(w)}});
+      res.dup++;continue;
+    }
+    if(n.start&&n.end&&wfDn(n.end)>=wfDn(n.start)){
+      for(const o of reg.recs){
+        if(o.building!==n.building||o.roomBed!==n.roomBed||!o.start||!o.end)continue;
+        if(wfDn(n.start)<=wfDn(o.end)&&wfDn(o.start)<=wfDn(n.end)){
+          const kind=n.start===o.start?'Разный срок окончания':n.end===o.end?'Разное начало':'Периоды пересекаются';
+          n.conflicts.push({with:o.id,kind});o.conflicts.push({with:n.id,kind});
+        }
+      }
+    }
+    reg.recs.push(n);n.conflicts.length?res.conflict++:res.added++;
+  }
+  return res;
+}
+// a = existing record, b = new conflicting record. act: keep | replace | both
+function wfResolve(reg,aId,bId,act){
+  const a=reg.recs.find(r=>r.id===aId),b=reg.recs.find(r=>r.id===bId);if(!a||!b)return;
+  const at=new Date().toISOString(),per=r=>wfRu(r.start)+' – '+wfRu(r.end);
+  if(act==='keep'){
+    reg.rejected.push(wfKey(b));a.history.push({at,type:'Отклонён новый период',detail:per(b)});
+  }else if(act==='replace'){
+    reg.rejected.push(wfKey(a));
+    const type=a.start===b.start&&wfDn(b.end)>wfDn(a.end)?'Продление':'Исправление';
+    a.history.push({at,type,detail:per(a)+' → '+per(b)});
+    ['start','end','rawStart','rawEnd'].forEach(k=>a[k]=b[k]);a.flags=b.flags;a.sources=a.sources.concat(b.sources);
+    a.conflicts=a.conflicts.concat(b.conflicts);
+  }else{
+    a.history.push({at,type:'Оба периода подтверждены',detail:per(a)+' и '+per(b)});
+    b.history.push({at,type:'Оба периода подтверждены',detail:per(a)+' и '+per(b)});
+  }
+  if(act!=='both')reg.recs=reg.recs.filter(r=>r!==b);
+  reg.recs.forEach(r=>{
+    r.conflicts.forEach(c=>{if(c.with===b.id&&act==='replace')c.with=a.id});
+    r.conflicts=r.conflicts.filter(c=>c.with!==r.id&&reg.recs.some(x=>x.id===c.with)&&!(act==='both'&&((r===a&&c.with===b.id)||(r===b&&c.with===a.id)))&&!(act==='keep'&&c.with===b.id));
+  });
+}
+function wfFix(reg,id,s,e){
+  const r=reg.recs.find(x=>x.id===id),ns=wfDate(s),ne=wfDate(e);
+  if(!r||!ns||!ne||wfDn(ne)<wfDn(ns))return false;
+  r.history.push({at:new Date().toISOString(),type:'Ручное исправление',detail:(r.start?wfRu(r.start):r.rawStart||'—')+' – '+(r.end?wfRu(r.end):r.rawEnd||'—')+' → '+wfRu(ns)+' – '+wfRu(ne)});
+  r.start=ns;r.end=ne;r.flags=wfFlags(r);return true;
+}
+function wfStatus(r,today){
+  if(r.conflicts.length||r.flags.length||!r.start||!r.end)return 'review';
+  const left=wfDn(r.end)-wfDn(today);
+  return left<0?'expired':left<=WF_SOON?'soon':'active';
+}
+const wfLeft=(r,today)=>r.end?wfDn(r.end)-wfDn(today):null;
+function wfMonthRange(ym){const [y,m]=ym.split('-').map(Number);return [wfDn(ym+'-01'),Math.round(Date.UTC(y,m,1)/864e5)-1]}
+// Inclusive calendar days of [s,e] inside month ym.
+function wfDays(s,e,ym){const [a,b]=wfMonthRange(ym);return Math.max(0,Math.min(wfDn(e),b)-Math.max(wfDn(s),a)+1)}
+// Plan for selected records: per-row days (a day of the same bed is counted once), errors (block) and warnings (confirm).
+function wfPlan(list,ym){
+  const rows=list.map(r=>({r,days:0,clip:false,err:[],warn:[]}));
+  rows.forEach(x=>{const r=x.r;
+    if(!r.start||!r.end||wfDn(r.end)<wfDn(r.start))x.err.push('Нет корректных дат — исправьте запись');
+    if(r.conflicts.length)x.err.push('Неразрешённый конфликт дат — решите его в блоке «Конфликты»');
+    r.flags.filter(f=>!wfIsDateFlag(f)).forEach(f=>x.warn.push(f));
+    r.warn.forEach(w=>x.warn.push(w));
+  });
+  const groups={};
+  rows.filter(x=>!x.err.length).forEach(x=>(groups[x.r.building+'|'+x.r.roomBed]=groups[x.r.building+'|'+x.r.roomBed]||[]).push(x));
+  Object.values(groups).forEach(g=>{
+    g.sort((p,q)=>wfDn(p.r.start)-wfDn(q.r.start));let cov=-Infinity;
+    g.forEach(x=>{
+      const s=Math.max(wfDn(x.r.start),cov+1),e=wfDn(x.r.end),[a,b]=wfMonthRange(ym);
+      x.clip=s>wfDn(x.r.start);
+      x.days=s>e?0:Math.max(0,Math.min(e,b)-Math.max(s,a)+1);
+      if(x.clip)x.warn.push('Пересекается с другой выбранной записью этой кровати: общие дни учтены один раз');
+      cov=Math.max(cov,e);
+    });
+  });
+  rows.forEach(x=>{if(!x.err.length&&x.days===0)x.warn.push('Нет дней в выбранном месяце')});
+  return rows;
+}
+/*==WIFI_CORE_END==*/
+
+/*==WIFI_UI_START==*/
+/* Wi-Fi module UI + Excel export. Registry lives in this browser (localStorage, per login); JSON backup available. */
+let wfReg=null,wfRegKey='';const wfSel=new Set();
+const WF_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function wfLoad(){const k=WF_ACTIVE_KEY();if(wfReg&&wfRegKey===k)return wfReg;wfRegKey=k;wfReg=load(k,{recs:[],rejected:[]});wfReg.recs=wfReg.recs||[];wfReg.rejected=wfReg.rejected||[];return wfReg}
+let wfVer=0;
+const wfCache=()=>save(wfRegKey,wfReg);
+// Server (Apps Script) is the source of truth; localStorage is only an offline cache.
+async function wfPull(quiet){
+  wfLoad();if(!sess)return;
+  try{
+    const j=await api(sess,'wifi.get');
+    if(j.version===0&&wfReg.recs.length){wfVer=0;await wfSave();return}   // first use: upload existing local registry
+    wfReg={recs:j.reg.recs||[],rejected:j.reg.rejected||[]};wfVer=j.version;wfCache();
+    [...wfSel].forEach(id=>{if(!wfReg.recs.some(r=>r.id===id))wfSel.delete(id)});
+  }catch(e){if(!quiet)toast('Реестр: '+(e.code==='unknown'?'обновите Code.gs (см. wifi_patch.gs)':e.message)+'. Показана локальная копия.')}
+}
+async function wfSave(){
+  wfCache();
+  try{const j=await api(sess,'wifi.put',{baseVersion:wfVer,reg:{recs:wfReg.recs,rejected:wfReg.rejected}});wfVer=j.version;return true}
+  catch(e){
+    if(e.code==='conflict'){toast('Реестр изменён другим пользователем. Данные обновлены — повторите действие.');await wfPull(true)}
+    else toast('Не сохранено на сервере: '+e.message);
+    return false;
+  }
+}
+const WF_LBL={active:['Active','on'],soon:['Expiring Soon','soon'],expired:['Expired','exp'],review:['Needs Review','rev']};
+const wfMonthLabel=ym=>{const [y,m]=ym.split('-');return WF_MONTHS[+m-1]+' '+y};
+function wfVisible(){
+  const reg=wfLoad(),t=wfToday(),q=$('#wfQ').value.trim().toLowerCase(),st=$('#wfSt').value,so=$('#wfSort').value;
+  let l=reg.recs.filter(r=>(!st||wfStatus(r,t)===st)&&(!q||[r.building,r.room,r.bed,r.roomBed,r.roomClass,r.sponsor,r.employer,r.start,r.end,wfRu(r.start),wfRu(r.end)].join(' ').toLowerCase().includes(q)));
+  const cmp={room:(a,b)=>(a.building+a.roomBed).localeCompare(b.building+b.roomBed,undefined,{numeric:true}),
+    end:(a,b)=>(a.end||'9').localeCompare(b.end||'9'),start:(a,b)=>(a.start||'9').localeCompare(b.start||'9'),
+    sponsor:(a,b)=>a.sponsor.localeCompare(b.sponsor)};
+  return l.sort(cmp[so]);
+}
+function wfRender(){
+  const reg=wfLoad(),t=wfToday(),list=wfVisible();
+  $('#wfN').textContent=reg.recs.length;
+  $('#wfList').innerHTML=list.length?list.map(r=>{
+    const s=wfStatus(r,t),L=wfLeft(r,t),lb=WF_LBL[s];
+    const hist=r.history.map(h=>wfRu(h.at.slice(0,10))+' '+h.type+': '+h.detail).join('; ');
+    return '<div class="item"><input type="checkbox" data-wf="'+r.id+'"'+(wfSel.has(r.id)?' checked':'')+'><div class="t">'
+      +'<b>'+esc(r.roomBed||'—')+'</b> · '+esc(r.building||'—')+' · '+esc(r.roomClass||'—')+' <span class="badge '+lb[1]+'">'+lb[0]+'</span><br>'
+      +'с '+wfRu(r.start)+' по '+wfRu(r.end)+(L===null?'':' · '+(L>=0?'осталось '+L+' дн.':'истёк '+(-L)+' дн. назад'))+'<br>'
+      +'<span class="small">'+esc(r.sponsor)+(r.employer&&r.employer!==r.sponsor?' / '+esc(r.employer):'')+' · файлов: '+r.sources.length+' · последний: '+esc(r.sources[r.sources.length-1].file)+'</span>'
+      +r.flags.concat(r.warn).map(f=>'<br><span class="small" style="color:var(--bad)">⚠ '+esc(f)+'</span>').join('')
+      +(hist?'<br><span class="small">История: '+esc(hist)+'</span>':'')
+      +'</div><button class="sec" data-wffix="'+r.id+'" title="Исправить даты">✎</button></div>';
+  }).join(''):'<p class="small">Нет записей. Загрузите отчёты приёмной.</p>';
+  $('#wfAll').checked=list.length>0&&list.every(r=>wfSel.has(r.id));
+  // conflicts
+  const idx=new Map(reg.recs.map((r,i)=>[r.id,i])),pairs=[];
+  reg.recs.forEach((r,i)=>r.conflicts.forEach(c=>{if(idx.get(c.with)>i)pairs.push([r,reg.recs[idx.get(c.with)],c.kind])}));
+  const cb=$('#wfConf');cb.classList.toggle('hide',!pairs.length);
+  cb.innerHTML=pairs.length?'<h2>⚠ Конфликты дат ('+pairs.length+')</h2>'+pairs.map(([a,b,k])=>
+    '<div class="item" style="display:block"><b>'+esc(a.roomBed)+'</b> · '+esc(k)+'<br>'
+    +'В реестре: '+wfRu(a.start)+' – '+wfRu(a.end)+' <span class="small">('+esc(a.sources[0].file)+')</span><br>'
+    +'Новая запись: '+wfRu(b.start)+' – '+wfRu(b.end)+' <span class="small">('+esc(b.sources[0].file)+')</span>'
+    +'<div class="btns" style="margin-top:6px"><button class="btn sec" data-wfres="replace|'+a.id+'|'+b.id+'">Принять новые даты (продление/исправление)</button>'
+    +'<button class="btn sec" data-wfres="keep|'+a.id+'|'+b.id+'">Оставить старые</button>'
+    +'<button class="btn sec" data-wfres="both|'+a.id+'|'+b.id+'">Оба периода верны</button></div></div>').join(''):'';
+  wfPreview();
+}
+function wfPreview(){
+  const reg=wfLoad(),ym=$('#wfM').value,chosen=reg.recs.filter(r=>wfSel.has(r.id));
+  $('#wfSelN').textContent=chosen.length;
+  if(!chosen.length||!ym){$('#wfPrev').innerHTML='<p class="small">Отметьте аккаунты в реестре и выберите месяц.</p>';$('#wfOkRow').classList.add('hide');return}
+  const plan=wfPlan(chosen,ym),total=plan.reduce((s,x)=>s+x.days,0),warns=plan.some(x=>x.warn.length);
+  $('#wfPrev').innerHTML='<p class="small">Месяц: <b>'+wfMonthLabel(ym)+'</b> · записей: '+plan.length+' · всего дней: <b>'+total+'</b></p>'
+    +plan.map(x=>'<div class="item"><div class="t"><b>'+esc(x.r.roomBed)+'</b> · '+wfRu(x.r.start)+' – '+wfRu(x.r.end)+' → <b>'+x.days+' дн.</b>'
+    +x.err.map(e=>'<br><span class="small" style="color:var(--bad)">⛔ '+esc(e)+'</span>').join('')
+    +x.warn.map(e=>'<br><span class="small" style="color:var(--bad)">⚠ '+esc(e)+'</span>').join('')+'</div></div>').join('');
+  $('#wfOkRow').classList.toggle('hide',!warns);
+}
+async function wfRead(files){
+  const reg=wfLoad(),log=[];
+  for(const f of files){
+    try{
+      const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+      const nm=wb.SheetNames.find(n=>n.trim().toLowerCase()==='wi-fi');
+      if(!nm){log.push('⛔ '+f.name+': нет листа «Wi-Fi»');continue}
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[nm],{header:1,raw:true,defval:null});
+      const r=wfIngest(reg,wfParse(rows,f.name));
+      log.push('✓ '+f.name+': новых '+r.added+', повторов '+r.dup+', конфликтов '+r.conflict+(r.skipped?', пропущено ранее отклонённых '+r.skipped:''));
+    }catch(e){log.push('⛔ '+f.name+': '+e.message)}
+  }
+  if(!await wfSave())log.push('⛔ Изменения НЕ сохранены на сервере. Загрузите файлы снова.');
+  $('#wfLog').innerHTML=log.map(esc).join('<br>');wfRender();
+}
+// ---- Excel (layout, fonts, headers and widths follow the reference WiFi report; extra column I = days) ----
+async function wfXlsx(plan,ym){
+  const xe=xmlEscape,[ms,me]=wfMonthRange(ym),ser=iso=>wfDn(iso)+25569;
+  const sc=(ref,s,t)=>'<c r="'+ref+'" s="'+s+'" t="inlineStr"><is><t xml:space="preserve">'+xe(t)+'</t></is></c>';
+  const H=['№','Sponsor','Employer','Wifi active From\nDate & Time','Wifi active To\nDate & Time','Building','Room Class','Room/Bed','Days in\n'+wfMonthLabel(ym)];
+  let sd='<row r="1" ht="25.2" customHeight="1">'+H.map((h,i)=>sc('ABCDEFGHI'[i]+'1',1,h)).join('')+sc('K1',2,'Month start')+'<c r="L1" s="3"><v>'+(ms+25569)+'</v></c></row>';
+  plan.forEach((x,i)=>{
+    const r=i+2,q=x.r,days='<c r="I'+r+'" s="4"><f>MAX(0,MIN(E'+r+',$L$2)-MAX(D'+r+',$L$1)+1)</f><v>'+wfDays(q.start,q.end,ym)+'</v></c>';
+    sd+='<row r="'+r+'" ht="14.25" customHeight="1">'+'<c r="A'+r+'" s="4"><v>'+(i+1)+'</v></c>'
+      +sc('B'+r,2,q.sponsor)+sc('C'+r,2,q.employer)+'<c r="D'+r+'" s="3"><v>'+ser(q.start)+'</v></c><c r="E'+r+'" s="3"><v>'+ser(q.end)+'</v></c>'
+      +sc('F'+r,2,q.building)+sc('G'+r,2,q.roomClass)+sc('H'+r,2,q.roomBed)
+      +(x.clip?'<c r="I'+r+'" s="4"><v>'+x.days+'</v></c>'+sc('J'+r,2,'Overlap: shared days counted once'):days)
+      +(r===2?sc('K2',2,'Month end')+'<c r="L2" s="3"><f>EOMONTH(L1,0)</f><v>'+(me+25569)+'</v></c>':'')+'</row>';
+  });
+  const w=[7.44,44.11,30,17.44,15.11,10.78,11.78,10.78,20,30,14,12];
+  const sheet='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="14.25"/><cols>'
+    +w.map((x,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+x+'" customWidth="1"/>').join('')+'</cols><sheetData>'+sd+'</sheetData><autoFilter ref="A1:I'+(plan.length+1)+'"/><pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/></worksheet>';
+  const bd='<border><left style="thin"><color auto="1"/></left><right style="thin"><color auto="1"/></right><top style="thin"><color auto="1"/></top><bottom style="thin"><color auto="1"/></bottom><diagonal/></border>';
+  const xf=(n,f)=>'<xf numFmtId="'+n+'" fontId="'+f+'" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>';
+  const styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="dd\\.mm\\.yyyy"/></numFmts>'
+    +'<fonts count="2"><font><sz val="10"/><name val="Century Gothic"/></font><font><b/><sz val="10"/><name val="Century Gothic"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'
+    +'<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>'+bd+'</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+    +'<cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'+xf(0,1)+xf(49,0)+xf(164,0)+xf(1,0)+'</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  const NS='http://schemas.openxmlformats.org/',zip=new JSZip();
+  zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
+  zip.file('_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="'+NS+'package/2006/relationships"><Relationship Id="rId1" Type="'+NS+'officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+  zip.file('xl/workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="'+NS+'officeDocument/2006/relationships"><sheets><sheet name="Wi-Fi" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">\'Wi-Fi\'!$A$1:$I$'+(plan.length+1)+'</definedName></definedNames></workbook>');
+  zip.file('xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="'+NS+'package/2006/relationships"><Relationship Id="rId1" Type="'+NS+'officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="'+NS+'officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
+  zip.file('xl/styles.xml',styles);zip.file('xl/worksheets/sheet1.xml',sheet);
+  return zip.generateAsync({type:'uint8array',compression:'DEFLATE'});
+}
+async function wfGenerate(){
+  const reg=wfLoad(),ym=$('#wfM').value,chosen=reg.recs.filter(r=>wfSel.has(r.id));
+  if(!chosen.length||!ym){toast('Выберите аккаунты и месяц');return}
+  const plan=wfPlan(chosen,ym);
+  if(plan.some(x=>x.err.length)){toast('Есть ошибки (⛔) — исправьте или снимите отметку с этих записей');return}
+  if(plan.some(x=>x.warn.length)&&!$('#wfOk').checked){toast('Подтвердите, что предупреждения (⚠) проверены');return}
+  plan.sort((a,b)=>(a.r.building+a.r.roomBed).localeCompare(b.r.building+b.r.roomBed,undefined,{numeric:true}));
+  saveBytes(await wfXlsx(plan,ym),'WiFi report '+ym+'.xlsx');toast('Отчёт создан ✓ Записей: '+plan.length);
+}
+// ---- wiring ----
+$('#wfFiles').onchange=async e=>{await wfRead([...e.target.files]);e.target.value=''};
+['wfQ','wfSt','wfSort'].forEach(id=>$('#'+id).oninput=wfRender);
+$('#wfM').oninput=wfPreview;$('#wfM').value=wfToday().slice(0,7);
+$('#wfAll').onchange=e=>{wfVisible().forEach(r=>e.target.checked?wfSel.add(r.id):wfSel.delete(r.id));wfRender()};
+$('#wfGo').onclick=()=>wfGenerate().catch(e=>{console.error(e);toast(e.message)});
+$('#tab-wifi').addEventListener('click',async e=>{
+  const res=e.target.closest('[data-wfres]'),fix=e.target.closest('[data-wffix]');
+  if(res){const [a,x,y]=res.dataset.wfres.split('|');wfResolve(wfLoad(),x,y,a);await wfSave();wfRender()}
+  if(fix){const r=wfLoad().recs.find(z=>z.id===fix.dataset.wffix);
+    const s=prompt('Дата начала (дд.мм.гггг):',wfRu(r.start)==='—'?'':wfRu(r.start));if(s===null)return;
+    const en=prompt('Дата окончания (дд.мм.гггг):',wfRu(r.end)==='—'?'':wfRu(r.end));if(en===null)return;
+    if(wfFix(wfLoad(),r.id,s,en)){await wfSave();wfRender()}else toast('Некорректные даты')}
+});
+$('#tab-wifi').addEventListener('change',e=>{const id=e.target.dataset&&e.target.dataset.wf;if(id){e.target.checked?wfSel.add(id):wfSel.delete(id);wfPreview();$('#wfAll').checked=wfVisible().every(r=>wfSel.has(r.id))}});
+$('#wfExp').onclick=()=>{dl(new Blob([JSON.stringify(wfLoad())],{type:'application/json'}),'wifi-registry-'+wfToday()+'.json')};
+$('#wfImpBtn').onclick=()=>$('#wfImp').click();
+$('#wfImp').onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text());
+  if(!Array.isArray(j.recs))throw 0;if(!confirm('Заменить реестр на этом устройстве копией из файла?'))return;
+  wfReg={recs:j.recs,rejected:j.rejected||[]};await wfSave();wfSel.clear();wfRender()}catch(x){toast('Не удалось прочитать копию')}e.target.value=''};
+/*==WIFI_UI_END==*/
 
 /* ============ СТАРТ ============ */
 (function boot(){
