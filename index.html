@@ -141,6 +141,48 @@
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
+<style>
+  /* ===== Wi-Fi: панель, таблица ===== */
+  body.wide main{max-width:1280px}
+  #wfEd{z-index:35;justify-content:center}#wfEd .card{width:100%;max-width:420px;color:var(--tx);align-self:center}
+  .wf-grid{display:grid;grid-template-columns:280px minmax(0,1fr);gap:16px;align-items:start}
+  .wf-side{position:sticky;top:72px;display:grid;gap:14px;max-height:calc(100vh - 84px);overflow:auto}
+  .wf-side .card,.wf-main .card{margin-bottom:0}.wf-main{display:grid;gap:14px;min-width:0}
+  .wf-side h3{margin:0 0 10px;font-size:14px;font-weight:700}
+  .wf-kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .wf-kpi{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--bd);background:var(--bg);color:var(--tx);border-radius:12px;padding:10px 12px;cursor:pointer}
+  .wf-kpi:first-child{grid-column:1/-1}.wf-kpi b{font-size:26px;line-height:1;font-weight:700}.wf-kpi span{font-size:12px;font-weight:600;color:var(--mut)}
+  .wf-kpi.on{border-color:var(--ac);box-shadow:0 0 0 3px var(--acs)}
+  .wf-kpi.active b{color:var(--ok)}.wf-kpi.soon b{color:var(--warn)}.wf-kpi.expired b{color:var(--bad)}.wf-kpi.review b{color:var(--rev)}
+  .wf-b{display:grid;grid-template-columns:46px 1fr 30px;gap:8px;align-items:center;width:100%;border:0;background:transparent;color:var(--tx);padding:7px 6px;border-radius:8px;cursor:pointer;font-size:13px;text-align:left}
+  .wf-b.on{background:var(--acs)}.wf-b em{font-style:normal;text-align:right;color:var(--mut)}
+  .bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--bd)}.bar i{display:block;height:100%}
+  .wf-li{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:5px 0;border-top:1px solid var(--bd)}.wf-li:first-of-type{border-top:0}
+  .wf-tools{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px}
+  .wf-pick{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+  .wf-pick .btn{padding:7px 12px;font-size:14px}
+  .wf-tbl{border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+  .wf-head,.wf-row{display:grid;grid-template-columns:34px minmax(110px,1.3fr) 58px minmax(70px,.8fr) 92px 92px 76px 122px minmax(90px,1.2fr) 124px;gap:8px;align-items:center;padding:9px 8px}
+  .wf-head{background:var(--bg);font-size:12px;font-weight:700;color:var(--mut)}
+  .wf-row{border-top:1px solid var(--bd);font-size:14px;content-visibility:auto;contain-intrinsic-size:auto 46px}
+  .wf-row:hover{background:var(--bg)}
+  .c-chk{margin:0!important;display:flex}.c-chk input{width:20px;height:20px}
+  .c-sp,.c-cls{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mut)}
+  .c-left.neg{color:var(--bad)}.wf-br{display:none}
+  .c-act{display:flex;gap:4px;justify-content:flex-end}
+  .wf-ic{border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:8px;min-width:34px;height:32px;padding:0 8px;font-size:13px;cursor:pointer}
+  .wf-ic:hover{border-color:var(--ac)}.wf-ic.warn{color:var(--warn);background:var(--warnb);border-color:transparent;font-weight:700}.wf-x:hover{border-color:var(--bad)}
+  .wf-det{grid-column:1/-1;background:var(--bg);border-radius:10px;padding:10px 12px;font-size:13px;display:grid;gap:6px}
+  .wf-det .w{color:var(--warn)}.wf-det .m{color:var(--mut)}
+  @media(max-width:960px){.wf-grid{grid-template-columns:1fr}.wf-side{position:static;max-height:none;overflow:visible;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}}
+  @media(max-width:760px){
+    .wf-tools{grid-template-columns:1fr 1fr}.wf-tools input{grid-column:1/-1}
+    .wf-head{display:none}.wf-tbl{border:0}
+    .wf-row{display:flex;flex-wrap:wrap;gap:4px 10px;padding:12px 4px;align-items:center}
+    .wf-row>*{order:5}.c-chk{order:0;flex:0 0 28px}.c-room{order:1;flex:1 1 0}.c-st{order:2}.wf-br{display:block;order:3;flex-basis:100%;height:0}
+    .c-bld{margin-left:38px}.c-bld,.c-cls,.c-d,.c-left{font-size:13px;color:var(--mut)}.c-act{order:6;margin-left:auto}.c-sp{order:7;flex:1 1 100%;margin-left:38px;font-size:12px}.wf-det{order:9}
+  }
+</style>
 </head>
 <body>
 <header>
@@ -249,31 +291,48 @@
 
 <!-- WI-FI -->
 <section id="tab-wifi" class="hide">
-  <div class="card">
-    <h2>Wi-Fi: загрузка отчётов приёмной</h2>
-    <p class="small">Читается только лист «Wi-Fi». «Bottled Water» игнорируется. Можно выбрать несколько файлов; повторная загрузка дубликатов не создаёт.</p>
+ <div class="wf-grid">
+  <aside class="wf-side" id="wfDash"></aside>
+  <div class="wf-main">
+   <div class="card">
+    <h2>Загрузка отчётов приёмной</h2>
+    <p class="small">Читается только лист «Wi-Fi». «Bottled Water» игнорируется. Файлы не сохраняются: данные считываются и файл сразу отбрасывается.</p>
     <input type="file" id="wfFiles" accept=".xlsx" multiple>
     <p class="small" id="wfLog"></p>
-    <div class="btns"><button class="btn sec" id="wfExp">⬇️ Копия реестра (.json)</button><button class="btn sec" id="wfImpBtn">⬆️ Загрузить копию</button><input type="file" id="wfImp" accept=".json,application/json" class="hide"></div>
-  </div>
-  <div class="card hide" id="wfConf"></div>
-  <div class="card">
+    <div class="btns" style="margin-top:8px"><button class="btn sec" id="wfExp">⬇️ Копия реестра</button><button class="btn sec" id="wfImpBtn">⬆️ Загрузить копию</button><input type="file" id="wfImp" accept=".json,application/json" class="hide"></div>
+   </div>
+   <div class="card hide" id="wfConf"></div>
+   <div class="card">
     <h2>Реестр аккаунтов (<span id="wfN">0</span>)</h2>
-    <input id="wfQ" placeholder="Поиск: комната, здание, спонсор, дата…">
-    <div class="row" style="margin-top:6px">
-      <select id="wfSt"><option value="">Все статусы</option><option value="active">Active</option><option value="soon">Expiring Soon</option><option value="expired">Expired</option><option value="review">Needs Review</option></select>
-      <select id="wfSort"><option value="room">Сорт.: комната</option><option value="end">Сорт.: окончание</option><option value="start">Сорт.: начало</option><option value="sponsor">Сорт.: спонсор</option></select>
+    <div class="wf-tools">
+     <input id="wfQ" placeholder="Поиск: комната, здание, спонсор, дата…">
+     <select id="wfSt"><option value="">Все статусы</option><option value="active">Active</option><option value="soon">Expiring Soon</option><option value="expired">Expired</option><option value="review">Needs Review</option></select>
+     <select id="wfBld"><option value="">Все здания</option></select>
+     <select id="wfSort"><option value="room">По комнате</option><option value="end">По окончанию</option><option value="start">По началу</option><option value="sponsor">По спонсору</option></select>
     </div>
-    <label style="display:flex;gap:10px;align-items:center;color:var(--tx)"><input type="checkbox" id="wfAll" style="width:22px;height:22px"> Выбрать все показанные</label>
-    <div id="wfList"></div>
-  </div>
-  <div class="card">
+    <div class="wf-pick"><span class="small">Выбрать:</span>
+     <button class="chip" data-wfpick="active">все Active</button><button class="chip" data-wfpick="soon">все Expiring Soon</button><button class="chip code" data-wfpick="none">снять выбор</button>
+     <button class="btn sec hide" id="wfAccAll"></button><button class="btn sec hide" id="wfDelSel"></button>
+    </div>
+    <div class="wf-tbl">
+     <div class="wf-head"><label class="c-chk"><input type="checkbox" id="wfAll" title="Выбрать все показанные"></label><span>Комната / кровать</span><span>Здание</span><span>Класс</span><span>Начало</span><span>Окончание</span><span>Осталось</span><span>Статус</span><span>Спонсор</span><span></span></div>
+     <div id="wfList"></div>
+    </div>
+   </div>
+   <div class="card">
     <h2>Отчёт (выбрано: <span id="wfSelN">0</span>)</h2>
     <label>Месяц отчёта</label><input type="month" id="wfM">
     <div id="wfPrev"></div>
     <label id="wfOkRow" class="hide" style="display:flex;gap:10px;align-items:center;color:var(--tx)"><input type="checkbox" id="wfOk" style="width:22px;height:22px"> Предупреждения (⚠) проверены, продолжить</label>
     <div class="btns"><button class="btn" id="wfGo">Сформировать отчёт (.xlsx)</button></div>
+   </div>
   </div>
+ </div>
+ <div id="wfEd" class="modal"><div class="card">
+  <h2>Изменить даты</h2><p class="small" id="wfEdT"></p><p class="small" id="wfEdH" style="color:var(--bad)"></p>
+  <label>Начало</label><input type="date" id="wfEdS"><label>Окончание</label><input type="date" id="wfEdE">
+  <div class="btns"><button class="btn" id="wfEdOk">Сохранить</button><button class="btn sec" id="wfEdX">Отмена</button><button class="btn del" id="wfEdDel">Удалить запись</button></div>
+ </div></div>
 </section>
 
 </main>
@@ -585,6 +644,7 @@ document.querySelectorAll('header button').forEach(b=>b.onclick=()=>{
     if(sess)loadDict(true);
   }
   if(b.dataset.tab==='users'){renderUsers();usersTimer=setInterval(()=>{if(!document.hidden)renderUsers(true)},30000)}
+  document.body.classList.toggle('wide',b.dataset.tab==='wifi');
   if(b.dataset.tab==='wifi'){wfRender();wfPull().then(wfRender)}
   if(b.dataset.tab==='data')showSize();
 });
@@ -1446,20 +1506,14 @@ function wfIngest(reg,recs){
     if(same){
       const s=n.sources[0];
       if(!same.sources.some(x=>x.file===s.file&&x.row===s.row))same.sources.push(s);
-      [['sponsor','спонсор'],['employer','работодатель'],['roomClass','класс комнаты']].forEach(([k,l])=>{
-        if(same[k]!==n[k]){const w='«'+s.file+'»: '+l+' «'+n[k]+'» ≠ «'+same[k]+'» — проверьте, та же ли это запись';
-          if(!same.warn.includes(w))same.warn.push(w)}});
+      ['sponsor','employer','roomClass'].forEach(k=>{
+        if(same[k]!==n[k]&&!wfSame(reg,k,same[k],n[k])){
+          same.alt=same.alt||{};const m=same.alt[k]=same.alt[k]||{};m[n[k]]=m[n[k]]||[];
+          if(!m[n[k]].includes(s.file))m[n[k]].push(s.file);
+        }});
       res.dup++;continue;
     }
-    if(n.start&&n.end&&wfDn(n.end)>=wfDn(n.start)){
-      for(const o of reg.recs){
-        if(o.building!==n.building||o.roomBed!==n.roomBed||!o.start||!o.end)continue;
-        if(wfDn(n.start)<=wfDn(o.end)&&wfDn(o.start)<=wfDn(n.end)){
-          const kind=n.start===o.start?'Разный срок окончания':n.end===o.end?'Разное начало':'Периоды пересекаются';
-          n.conflicts.push({with:o.id,kind});o.conflicts.push({with:n.id,kind});
-        }
-      }
-    }
+    wfDetect(reg,n);
     reg.recs.push(n);n.conflicts.length?res.conflict++:res.added++;
   }
   return res;
@@ -1490,7 +1544,7 @@ function wfFix(reg,id,s,e){
   const r=reg.recs.find(x=>x.id===id),ns=wfDate(s),ne=wfDate(e);
   if(!r||!ns||!ne||wfDn(ne)<wfDn(ns))return false;
   r.history.push({at:new Date().toISOString(),type:'Ручное исправление',detail:(r.start?wfRu(r.start):r.rawStart||'—')+' – '+(r.end?wfRu(r.end):r.rawEnd||'—')+' → '+wfRu(ns)+' – '+wfRu(ne)});
-  r.start=ns;r.end=ne;r.flags=wfFlags(r);return true;
+  r.start=ns;r.end=ne;r.flags=wfFlags(r);wfRecheck(reg,r);wfLog(reg,'Правка дат',r.roomBed+': '+r.history[r.history.length-1].detail);return true;
 }
 function wfStatus(r,today){
   if(r.conflicts.length||r.flags.length||!r.start||!r.end)return 'review';
@@ -1509,6 +1563,7 @@ function wfPlan(list,ym){
     if(r.conflicts.length)x.err.push('Неразрешённый конфликт дат — решите его в блоке «Конфликты»');
     r.flags.filter(f=>!wfIsDateFlag(f)).forEach(f=>x.warn.push(f));
     r.warn.forEach(w=>x.warn.push(w));
+    const at=wfAltText(r);if(at)x.warn.push(at);
   });
   const groups={};
   rows.filter(x=>!x.err.length).forEach(x=>(groups[x.r.building+'|'+x.r.roomBed]=groups[x.r.building+'|'+x.r.roomBed]||[]).push(x));
@@ -1525,75 +1580,133 @@ function wfPlan(list,ym){
   rows.forEach(x=>{if(!x.err.length&&x.days===0)x.warn.push('Нет дней в выбранном месяце')});
   return rows;
 }
+
+// ---- names / log / delete / recheck / stats ----
+function wfLog(reg,type,detail){reg.log=reg.log||[];reg.log.unshift({at:new Date().toISOString(),by:(typeof sess!=='undefined'&&sess)?sess.login:'',type,detail});if(reg.log.length>200)reg.log.length=200}
+function wfSame(reg,k,a,b){const s=reg.same||[];return s.includes(k+'|'+a+'|'+b)||s.includes(k+'|'+b+'|'+a)}
+const WF_ALT_F={sponsor:'спонсор',employer:'работодатель',roomClass:'класс комнаты'};
+function wfAltText(r){if(!r.alt)return '';const p=[];for(const k in r.alt)for(const v in r.alt[k])p.push(WF_ALT_F[k]+' «'+v+'» (файлов: '+r.alt[k][v].length+')');return p.length?'Другое написание в других отчётах: '+p.join('; '):''}
+function wfClearAlt(reg){reg.recs.forEach(r=>{if(!r.alt)return;for(const k in r.alt){for(const v in r.alt[k])if(wfSame(reg,k,r[k],v))delete r.alt[k][v];if(!Object.keys(r.alt[k]).length)delete r.alt[k]}if(!Object.keys(r.alt).length)delete r.alt})}
+// Old registries stored one long warning per file; fold them into compact r.alt. Idempotent.
+function wfNormalize(reg){
+  reg.same=reg.same||[];reg.log=reg.log||[];reg.rejected=reg.rejected||[];
+  const re=/^«(.+)»: (спонсор|работодатель|класс комнаты) «(.*)» ≠ «(.*)» — проверьте/,inv={'спонсор':'sponsor','работодатель':'employer','класс комнаты':'roomClass'};
+  reg.recs.forEach(r=>{r.warn=r.warn||[];r.history=r.history||[];r.conflicts=r.conflicts||[];
+    r.warn=r.warn.filter(w=>{const m=re.exec(w);if(!m)return true;const k=inv[m[2]];r.alt=r.alt||{};const o=r.alt[k]=r.alt[k]||{};o[m[3]]=o[m[3]]||[];if(!o[m[3]].includes(m[1]))o[m[3]].push(m[1]);return false})});
+  wfClearAlt(reg);return reg;
+}
+function wfAccept(reg,ids){
+  let n=0;reg.recs.filter(r=>ids.includes(r.id)&&r.alt).forEach(r=>{for(const k in r.alt)for(const v in r.alt[k])if(!wfSame(reg,k,r[k],v)){reg.same.push(k+'|'+r[k]+'|'+v);n++}});
+  wfClearAlt(reg);if(n)wfLog(reg,'Подтверждены названия','пар: '+n);return n;
+}
+function wfDetect(reg,n){
+  if(!(n.start&&n.end&&wfDn(n.end)>=wfDn(n.start)))return;
+  for(const o of reg.recs){
+    if(o===n||o.building!==n.building||o.roomBed!==n.roomBed||!o.start||!o.end)continue;
+    if(wfDn(n.start)<=wfDn(o.end)&&wfDn(o.start)<=wfDn(n.end)){
+      const kind=n.start===o.start?'Разный срок окончания':n.end===o.end?'Разное начало':'Периоды пересекаются';
+      n.conflicts.push({with:o.id,kind});o.conflicts.push({with:n.id,kind});
+    }
+  }
+}
+function wfRecheck(reg,r){reg.recs.forEach(o=>{o.conflicts=o.conflicts.filter(c=>c.with!==r.id)});r.conflicts=[];wfDetect(reg,r)}
+// Deleted periods go to "rejected" so re-uploading old reception files does not bring them back.
+function wfDelete(reg,ids){
+  const del=reg.recs.filter(r=>ids.includes(r.id));
+  del.forEach(r=>{const k=wfKey(r);if(!reg.rejected.includes(k))reg.rejected.push(k);wfLog(reg,'Удалена запись',r.roomBed+' '+wfRu(r.start)+' – '+wfRu(r.end))});
+  reg.recs=reg.recs.filter(r=>!ids.includes(r.id));
+  reg.recs.forEach(r=>{r.conflicts=r.conflicts.filter(c=>!ids.includes(c.with))});
+  return del.length;
+}
+function wfStats(reg,today){
+  const s={total:reg.recs.length,active:0,soon:0,expired:0,review:0,bld:{},soonList:[]};
+  reg.recs.forEach(r=>{const st=wfStatus(r,today),b=r.building||'—';s[st]++;
+    const o=s.bld[b]=s.bld[b]||{active:0,soon:0,expired:0,review:0,total:0};o[st]++;o.total++;
+    if(r.end&&(st==='soon'||(st==='active'&&wfLeft(r,today)<=7)))s.soonList.push(r)});
+  s.soonList.sort((a,b)=>a.end.localeCompare(b.end));return s;
+}
 /*==WIFI_CORE_END==*/
 
 /*==WIFI_UI_START==*/
-/* Wi-Fi module UI + Excel export. Registry lives in this browser (localStorage, per login); JSON backup available. */
-let wfReg=null,wfRegKey='';const wfSel=new Set();
+/* Wi-Fi module UI. Server (Apps Script) is the source of truth; localStorage is an offline cache. */
+let wfReg=null,wfRegKey='',wfVer=0,wfEdId=null;const wfSel=new Set(),wfOpen=new Set();
 const WF_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
-function wfLoad(){const k=WF_ACTIVE_KEY();if(wfReg&&wfRegKey===k)return wfReg;wfRegKey=k;wfReg=load(k,{recs:[],rejected:[]});wfReg.recs=wfReg.recs||[];wfReg.rejected=wfReg.rejected||[];return wfReg}
-let wfVer=0;
+const WF_LBL={active:['Active','on'],soon:['Expiring Soon','soon'],expired:['Expired','exp'],review:['Needs Review','rev']};
+const WF_C={active:'var(--ok)',soon:'var(--warn)',expired:'var(--bad)',review:'var(--rev)'};
+const wfMonthLabel=ym=>{const [y,m]=ym.split('-');return WF_MONTHS[+m-1]+' '+y};
+const wfNum=(a,b)=>a.localeCompare(b,undefined,{numeric:true});
+function wfLoad(){const k=WF_ACTIVE_KEY();if(wfReg&&wfRegKey===k)return wfReg;wfRegKey=k;wfReg=wfNormalize(Object.assign({recs:[],rejected:[]},load(k,{})));return wfReg}
 const wfCache=()=>save(wfRegKey,wfReg);
-// Server (Apps Script) is the source of truth; localStorage is only an offline cache.
 async function wfPull(quiet){
   wfLoad();if(!sess)return;
   try{
     const j=await api(sess,'wifi.get');
     if(j.version===0&&wfReg.recs.length){wfVer=0;await wfSave();return}   // first use: upload existing local registry
-    wfReg={recs:j.reg.recs||[],rejected:j.reg.rejected||[]};wfVer=j.version;wfCache();
+    wfReg=wfNormalize({recs:j.reg.recs||[],rejected:j.reg.rejected||[],same:j.reg.same||wfReg.same,log:j.reg.log||wfReg.log});wfVer=j.version;wfCache();
     [...wfSel].forEach(id=>{if(!wfReg.recs.some(r=>r.id===id))wfSel.delete(id)});
   }catch(e){if(!quiet)toast('Реестр: '+(e.code==='unknown'?'обновите Code.gs (см. wifi_patch.gs)':e.message)+'. Показана локальная копия.')}
 }
 async function wfSave(){
   wfCache();
-  try{const j=await api(sess,'wifi.put',{baseVersion:wfVer,reg:{recs:wfReg.recs,rejected:wfReg.rejected}});wfVer=j.version;return true}
+  try{const j=await api(sess,'wifi.put',{baseVersion:wfVer,reg:{recs:wfReg.recs,rejected:wfReg.rejected,same:wfReg.same,log:wfReg.log}});wfVer=j.version;return true}
   catch(e){
     if(e.code==='conflict'){toast('Реестр изменён другим пользователем. Данные обновлены — повторите действие.');await wfPull(true)}
     else toast('Не сохранено на сервере: '+e.message);
     return false;
   }
 }
-const WF_LBL={active:['Active','on'],soon:['Expiring Soon','soon'],expired:['Expired','exp'],review:['Needs Review','rev']};
-const wfMonthLabel=ym=>{const [y,m]=ym.split('-');return WF_MONTHS[+m-1]+' '+y};
 function wfVisible(){
-  const reg=wfLoad(),t=wfToday(),q=$('#wfQ').value.trim().toLowerCase(),st=$('#wfSt').value,so=$('#wfSort').value;
-  let l=reg.recs.filter(r=>(!st||wfStatus(r,t)===st)&&(!q||[r.building,r.room,r.bed,r.roomBed,r.roomClass,r.sponsor,r.employer,r.start,r.end,wfRu(r.start),wfRu(r.end)].join(' ').toLowerCase().includes(q)));
-  const cmp={room:(a,b)=>(a.building+a.roomBed).localeCompare(b.building+b.roomBed,undefined,{numeric:true}),
-    end:(a,b)=>(a.end||'9').localeCompare(b.end||'9'),start:(a,b)=>(a.start||'9').localeCompare(b.start||'9'),
-    sponsor:(a,b)=>a.sponsor.localeCompare(b.sponsor)};
+  const reg=wfLoad(),t=wfToday(),q=$('#wfQ').value.trim().toLowerCase(),st=$('#wfSt').value,bl=$('#wfBld').value,so=$('#wfSort').value;
+  const l=reg.recs.filter(r=>(!st||wfStatus(r,t)===st)&&(!bl||(r.building||'—')===bl)&&(!q||[r.building,r.room,r.bed,r.roomBed,r.roomClass,r.sponsor,r.employer,r.start,r.end,wfRu(r.start),wfRu(r.end)].join(' ').toLowerCase().includes(q)));
+  const cmp={room:(a,b)=>wfNum(a.building+a.roomBed,b.building+b.roomBed),end:(a,b)=>(a.end||'9').localeCompare(b.end||'9'),start:(a,b)=>(a.start||'9').localeCompare(b.start||'9'),sponsor:(a,b)=>a.sponsor.localeCompare(b.sponsor)};
   return l.sort(cmp[so]);
+}
+function wfDash(reg,t){
+  const s=wfStats(reg,t),cur=$('#wfSt').value,cb=$('#wfBld').value;
+  const tile=(k,l,n)=>'<button class="wf-kpi '+k+(cur===k?' on':'')+'" data-wfst="'+k+'"><b>'+n+'</b><span>'+l+'</span></button>';
+  const bl=Object.keys(s.bld).sort(wfNum);
+  return '<div class="card"><h3>Сводка</h3><div class="wf-kpis">'+tile('','Всего аккаунтов',s.total)+tile('active','Active',s.active)+tile('soon','Expiring Soon',s.soon)+tile('expired','Expired',s.expired)+tile('review','Needs Review',s.review)+'</div></div>'
+  +'<div class="card"><h3>По зданиям</h3>'+(bl.length?bl.map(b=>{const o=s.bld[b];return '<button class="wf-b'+(cb===b?' on':'')+'" data-wfb="'+esc(b)+'"><span><b>'+esc(b)+'</b></span><div class="bar">'+['active','soon','expired','review'].map(k=>o[k]?'<i style="width:'+(o[k]/o.total*100)+'%;background:'+WF_C[k]+'"></i>':'').join('')+'</div><em>'+o.total+'</em></button>'}).join(''):'<p class="small">Пока пусто</p>')+'</div>'
+  +'<div class="card"><h3>Истекают в ближайшие 7 дней</h3>'+(s.soonList.length?s.soonList.slice(0,8).map(r=>{const L=wfLeft(r,t);return '<div class="wf-li"><b>'+esc(r.roomBed)+'</b><span class="small">'+wfRu(r.end).slice(0,5)+' · '+(L===0?'сегодня':L+' дн.')+'</span></div>'}).join(''):'<p class="small">Нет</p>')+'</div>'
+  +'<div class="card"><h3>Последние изменения</h3>'+(reg.log.length?reg.log.slice(0,5).map(x=>'<div class="wf-li" style="display:block"><span class="small">'+wfRu(x.at.slice(0,10)).slice(0,5)+(x.by?' · '+esc(x.by):'')+'</span><br>'+esc(x.type)+': <span class="small">'+esc(x.detail)+'</span></div>').join(''):'<p class="small">Пока нет</p>')+'</div>';
+}
+function wfRow(r,t){
+  const s=wfStatus(r,t),L=wfLeft(r,t),lb=WF_LBL[s],nw=r.flags.length+r.warn.length+r.conflicts.length+(r.alt?1:0),last=r.sources[r.sources.length-1];
+  const hist=r.history.map(h=>wfRu(h.at.slice(0,10))+' '+h.type+': '+h.detail).join('; ');
+  const det=wfOpen.has(r.id)?'<div class="wf-det">'+r.conflicts.map(c=>'<div class="w">⚠ Конфликт дат: '+esc(c.kind)+'</div>').concat(r.flags.concat(r.warn).map(f=>'<div class="w">⚠ '+esc(f)+'</div>')).join('')
+    +(r.alt?'<div class="w">⚠ '+esc(wfAltText(r))+' <button class="wf-ic" data-wfacc="'+r.id+'">Это одно и то же</button></div>':'')
+    +'<div class="m">Работодатель: '+esc(r.employer||'—')+' · файлов-источников: '+r.sources.length+' · последний: '+esc(last?last.file:'—')+'</div>'+(hist?'<div class="m">История: '+esc(hist)+'</div>':'')+'</div>':'';
+  return '<div class="wf-row"><label class="c-chk"><input type="checkbox" data-wf="'+r.id+'"'+(wfSel.has(r.id)?' checked':'')+'></label>'
+    +'<b class="c-room">'+esc(r.roomBed||'—')+'</b><span class="c-bld">'+esc(r.building||'—')+'</span><span class="c-cls">'+esc(r.roomClass||'—')+'</span>'
+    +'<span class="c-d">'+wfRu(r.start)+'</span><span class="c-d">'+wfRu(r.end)+'</span>'
+    +'<span class="c-left'+(L!==null&&L<0?' neg':'')+'">'+(L===null?'—':L>=0?L+' дн.':'−'+(-L)+' дн.')+'</span>'
+    +'<span class="c-st"><span class="badge '+lb[1]+'">'+lb[0]+'</span></span><span class="wf-br"></span>'
+    +'<span class="c-sp" title="'+esc(r.sponsor)+'">'+esc(r.sponsor)+'</span>'
+    +'<span class="c-act"><button class="wf-ic'+(nw?' warn':'')+'" data-wfinfo="'+r.id+'" title="Подробности">'+(nw?'⚠ '+nw:'ⓘ')+'</button><button class="wf-ic" data-wffix="'+r.id+'" title="Изменить даты">✎</button><button class="wf-ic wf-x" data-wfdel="'+r.id+'" title="Удалить">🗑</button></span>'+det+'</div>';
 }
 function wfRender(){
   const reg=wfLoad(),t=wfToday(),list=wfVisible();
-  $('#wfN').textContent=reg.recs.length;
-  $('#wfList').innerHTML=list.length?list.map(r=>{
-    const s=wfStatus(r,t),L=wfLeft(r,t),lb=WF_LBL[s];
-    const hist=r.history.map(h=>wfRu(h.at.slice(0,10))+' '+h.type+': '+h.detail).join('; ');
-    return '<div class="item"><input type="checkbox" data-wf="'+r.id+'"'+(wfSel.has(r.id)?' checked':'')+'><div class="t">'
-      +'<b>'+esc(r.roomBed||'—')+'</b> · '+esc(r.building||'—')+' · '+esc(r.roomClass||'—')+' <span class="badge '+lb[1]+'">'+lb[0]+'</span><br>'
-      +'с '+wfRu(r.start)+' по '+wfRu(r.end)+(L===null?'':' · '+(L>=0?'осталось '+L+' дн.':'истёк '+(-L)+' дн. назад'))+'<br>'
-      +'<span class="small">'+esc(r.sponsor)+(r.employer&&r.employer!==r.sponsor?' / '+esc(r.employer):'')+' · файлов: '+r.sources.length+' · последний: '+esc(r.sources[r.sources.length-1].file)+'</span>'
-      +r.flags.concat(r.warn).map(f=>'<br><span class="small" style="color:var(--bad)">⚠ '+esc(f)+'</span>').join('')
-      +(hist?'<br><span class="small">История: '+esc(hist)+'</span>':'')
-      +'</div><button class="sec" data-wffix="'+r.id+'" title="Исправить даты">✎</button></div>';
-  }).join(''):'<p class="small">Нет записей. Загрузите отчёты приёмной.</p>';
+  $('#wfN').textContent=reg.recs.length;$('#wfDash').innerHTML=wfDash(reg,t);
+  const bs=[...new Set(reg.recs.map(r=>r.building||'—'))].sort(wfNum),cb=$('#wfBld').value;
+  $('#wfBld').innerHTML='<option value="">Все здания</option>'+bs.map(b=>'<option'+(b===cb?' selected':'')+'>'+esc(b)+'</option>').join('');
+  $('#wfList').innerHTML=list.length?list.map(r=>wfRow(r,t)).join(''):'<p class="small" style="padding:14px 6px">Нет записей. Загрузите отчёты приёмной.</p>';
   $('#wfAll').checked=list.length>0&&list.every(r=>wfSel.has(r.id));
-  // conflicts
+  const na=reg.recs.filter(r=>r.alt).length;$('#wfAccAll').classList.toggle('hide',!na);$('#wfAccAll').textContent='✓ Подтвердить одинаковые названия ('+na+')';
   const idx=new Map(reg.recs.map((r,i)=>[r.id,i])),pairs=[];
   reg.recs.forEach((r,i)=>r.conflicts.forEach(c=>{if(idx.get(c.with)>i)pairs.push([r,reg.recs[idx.get(c.with)],c.kind])}));
-  const cb=$('#wfConf');cb.classList.toggle('hide',!pairs.length);
-  cb.innerHTML=pairs.length?'<h2>⚠ Конфликты дат ('+pairs.length+')</h2>'+pairs.map(([a,b,k])=>
+  const cf=$('#wfConf');cf.classList.toggle('hide',!pairs.length);
+  cf.innerHTML=pairs.length?'<h2>⚠ Конфликты дат ('+pairs.length+')</h2>'+pairs.map(([a,b,k])=>
     '<div class="item" style="display:block"><b>'+esc(a.roomBed)+'</b> · '+esc(k)+'<br>'
     +'В реестре: '+wfRu(a.start)+' – '+wfRu(a.end)+' <span class="small">('+esc(a.sources[0].file)+')</span><br>'
     +'Новая запись: '+wfRu(b.start)+' – '+wfRu(b.end)+' <span class="small">('+esc(b.sources[0].file)+')</span>'
-    +'<div class="btns" style="margin-top:6px"><button class="btn sec" data-wfres="replace|'+a.id+'|'+b.id+'">Принять новые даты (продление/исправление)</button>'
+    +'<div class="btns" style="margin-top:6px"><button class="btn sec" data-wfres="replace|'+a.id+'|'+b.id+'">Принять новые даты</button>'
     +'<button class="btn sec" data-wfres="keep|'+a.id+'|'+b.id+'">Оставить старые</button>'
     +'<button class="btn sec" data-wfres="both|'+a.id+'|'+b.id+'">Оба периода верны</button></div></div>').join(''):'';
   wfPreview();
 }
 function wfPreview(){
   const reg=wfLoad(),ym=$('#wfM').value,chosen=reg.recs.filter(r=>wfSel.has(r.id));
-  $('#wfSelN').textContent=chosen.length;
+  $('#wfSelN').textContent=chosen.length;const ds=$('#wfDelSel');ds.classList.toggle('hide',!chosen.length);ds.textContent='🗑 Удалить выбранные ('+chosen.length+')';
   if(!chosen.length||!ym){$('#wfPrev').innerHTML='<p class="small">Отметьте аккаунты в реестре и выберите месяц.</p>';$('#wfOkRow').classList.add('hide');return}
   const plan=wfPlan(chosen,ym),total=plan.reduce((s,x)=>s+x.days,0),warns=plan.some(x=>x.warn.length);
   $('#wfPrev').innerHTML='<p class="small">Месяц: <b>'+wfMonthLabel(ym)+'</b> · записей: '+plan.length+' · всего дней: <b>'+total+'</b></p>'
@@ -1611,6 +1724,7 @@ async function wfRead(files){
       if(!nm){log.push('⛔ '+f.name+': нет листа «Wi-Fi»');continue}
       const rows=XLSX.utils.sheet_to_json(wb.Sheets[nm],{header:1,raw:true,defval:null});
       const r=wfIngest(reg,wfParse(rows,f.name));
+      wfLog(reg,'Загрузка файла',f.name+': новых '+r.added+', повторов '+r.dup+', конфликтов '+r.conflict);
       log.push('✓ '+f.name+': новых '+r.added+', повторов '+r.dup+', конфликтов '+r.conflict+(r.skipped?', пропущено ранее отклонённых '+r.skipped:''));
     }catch(e){log.push('⛔ '+f.name+': '+e.message)}
   }
@@ -1658,25 +1772,48 @@ async function wfGenerate(){
   saveBytes(await wfXlsx(plan,ym),'WiFi report '+ym+'.xlsx');toast('Отчёт создан ✓ Записей: '+plan.length);
 }
 // ---- wiring ----
+async function wfCommit(){const ok=await wfSave();wfRender();return ok}
+function wfAskDel(ids){
+  if(!ids.length)return;
+  if(!confirm('Удалить записей: '+ids.length+'?\nПовторная загрузка тех же записей из старых отчётов будет пропускаться.'))return;
+  wfDelete(wfLoad(),ids);ids.forEach(id=>{wfSel.delete(id);wfOpen.delete(id)});wfCommit();
+}
+function wfEdit(id){
+  const r=wfLoad().recs.find(z=>z.id===id);if(!r)return;wfEdId=id;
+  $('#wfEdT').textContent=r.roomBed+' · '+(r.building||'—');$('#wfEdS').value=r.start||'';$('#wfEdE').value=r.end||'';
+  $('#wfEdH').textContent=r.start&&r.end?'':'В источнике: «'+r.rawStart+'» – «'+r.rawEnd+'»';$('#wfEd').classList.add('on');
+}
 $('#wfFiles').onchange=async e=>{await wfRead([...e.target.files]);e.target.value=''};
-['wfQ','wfSt','wfSort'].forEach(id=>$('#'+id).oninput=wfRender);
+['wfQ','wfSt','wfBld','wfSort'].forEach(id=>$('#'+id).oninput=wfRender);
 $('#wfM').oninput=wfPreview;$('#wfM').value=wfToday().slice(0,7);
 $('#wfAll').onchange=e=>{wfVisible().forEach(r=>e.target.checked?wfSel.add(r.id):wfSel.delete(r.id));wfRender()};
 $('#wfGo').onclick=()=>wfGenerate().catch(e=>{console.error(e);toast(e.message)});
+$('#wfAccAll').onclick=async()=>{const reg=wfLoad(),n=wfAccept(reg,reg.recs.map(r=>r.id));toast('Подтверждено пар названий: '+n);await wfCommit()};
+$('#wfDelSel').onclick=()=>wfAskDel([...wfSel]);
+$('#wfEdX').onclick=()=>$('#wfEd').classList.remove('on');
+$('#wfEdOk').onclick=async()=>{
+  if(!wfFix(wfLoad(),wfEdId,$('#wfEdS').value,$('#wfEdE').value)){toast('Проверьте даты: обе нужны, окончание не раньше начала');return}
+  $('#wfEd').classList.remove('on');await wfCommit();
+};
+$('#wfEdDel').onclick=()=>{$('#wfEd').classList.remove('on');wfAskDel([wfEdId])};
 $('#tab-wifi').addEventListener('click',async e=>{
-  const res=e.target.closest('[data-wfres]'),fix=e.target.closest('[data-wffix]');
-  if(res){const [a,x,y]=res.dataset.wfres.split('|');wfResolve(wfLoad(),x,y,a);await wfSave();wfRender()}
-  if(fix){const r=wfLoad().recs.find(z=>z.id===fix.dataset.wffix);
-    const s=prompt('Дата начала (дд.мм.гггг):',wfRu(r.start)==='—'?'':wfRu(r.start));if(s===null)return;
-    const en=prompt('Дата окончания (дд.мм.гггг):',wfRu(r.end)==='—'?'':wfRu(r.end));if(en===null)return;
-    if(wfFix(wfLoad(),r.id,s,en)){await wfSave();wfRender()}else toast('Некорректные даты')}
+  const g=a=>e.target.closest('['+a+']');let b;
+  if(b=g('data-wfres')){const [a,x,y]=b.dataset.wfres.split('|');wfResolve(wfLoad(),x,y,a);const r=wfLoad();wfLog(r,'Конфликт решён',a==='replace'?'принять новые даты':a==='keep'?'оставить старые':'оба периода верны');await wfCommit()}
+  else if(b=g('data-wffix'))wfEdit(b.dataset.wffix);
+  else if(b=g('data-wfdel'))wfAskDel([b.dataset.wfdel]);
+  else if(b=g('data-wfinfo')){const id=b.dataset.wfinfo;wfOpen.has(id)?wfOpen.delete(id):wfOpen.add(id);wfRender()}
+  else if(b=g('data-wfacc')){wfAccept(wfLoad(),[b.dataset.wfacc]);await wfCommit()}
+  else if(b=g('data-wfst')){$('#wfSt').value=$('#wfSt').value===b.dataset.wfst?'':b.dataset.wfst;wfRender()}
+  else if(b=g('data-wfb')){$('#wfBld').value=$('#wfBld').value===b.dataset.wfb?'':b.dataset.wfb;wfRender()}
+  else if(b=g('data-wfpick')){const k=b.dataset.wfpick,reg=wfLoad(),t=wfToday();
+    if(k==='none')wfSel.clear();else reg.recs.forEach(r=>{if(wfStatus(r,t)===k)wfSel.add(r.id)});wfRender()}
 });
 $('#tab-wifi').addEventListener('change',e=>{const id=e.target.dataset&&e.target.dataset.wf;if(id){e.target.checked?wfSel.add(id):wfSel.delete(id);wfPreview();$('#wfAll').checked=wfVisible().every(r=>wfSel.has(r.id))}});
 $('#wfExp').onclick=()=>{dl(new Blob([JSON.stringify(wfLoad())],{type:'application/json'}),'wifi-registry-'+wfToday()+'.json')};
 $('#wfImpBtn').onclick=()=>$('#wfImp').click();
 $('#wfImp').onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text());
-  if(!Array.isArray(j.recs))throw 0;if(!confirm('Заменить реестр на этом устройстве копией из файла?'))return;
-  wfReg={recs:j.recs,rejected:j.rejected||[]};await wfSave();wfSel.clear();wfRender()}catch(x){toast('Не удалось прочитать копию')}e.target.value=''};
+  if(!Array.isArray(j.recs))throw 0;if(!confirm('Заменить реестр копией из файла?'))return;
+  wfReg=wfNormalize({recs:j.recs,rejected:j.rejected||[],same:j.same||[],log:j.log||[]});wfSel.clear();await wfCommit()}catch(x){toast('Не удалось прочитать копию')}e.target.value=''};
 /*==WIFI_UI_END==*/
 
 /* ============ СТАРТ ============ */
