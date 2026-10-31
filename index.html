@@ -184,39 +184,61 @@
   }
 </style>
 <style>
-  /* ===== Карточки Wi-Fi: панель справа, предпросмотр, печать ===== */
-  body.wide main{max-width:1480px}
-  .wf-grid{grid-template-columns:272px minmax(0,1fr) 318px}
-  .wf-cardp{position:sticky;top:72px;max-height:calc(100vh - 84px);overflow:auto}.wf-cardp .card{margin:0}
-  .wc-langs{display:flex;flex-wrap:wrap;gap:6px}.wc-lg{display:flex!important;gap:6px;align-items:center;margin:0!important;padding:6px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx)!important;font-size:14px!important;cursor:pointer}
+  /* ===== Wi-Fi: колонки и конструктор карточек ===== */
+  body.wide main{max-width:1500px}
+  .wf-grid{grid-template-columns:272px minmax(0,1fr) 272px;grid-template-areas:"dash main card"}
+  .wf-side{grid-area:dash}.wf-main{grid-area:main}.wf-cardp{grid-area:card}
+  .wf-side,.wf-cardp{position:sticky;top:76px;align-self:start;display:grid;gap:14px;max-height:calc(100vh - 90px);overflow:auto;scrollbar-width:thin}
+  .wf-cardp .card{margin:0}
+  @media(max-width:1330px){.wf-grid{grid-template-columns:272px minmax(0,1fr);grid-template-areas:"dash main" "card main";grid-template-rows:auto 1fr}.wf-side,.wf-cardp{position:static;max-height:none;overflow:visible}}
+  @media(max-width:960px){.wf-grid{grid-template-columns:1fr;grid-template-areas:"dash" "main" "card"}}
+  /* окно конструктора */
+  #wcPv{z-index:50;background:var(--bg);color:var(--tx);padding:0;align-items:stretch;overflow:hidden}
+  .wcdes{flex:1;min-height:0;display:grid;grid-template-columns:390px minmax(0,1fr);width:100%}
+  .wcctl{background:var(--card);border-right:1px solid var(--bd);padding:16px;overflow:auto;display:flex;flex-direction:column;gap:2px}
+  .wcct{display:flex;justify-content:space-between;align-items:center}.wcct h2{margin:0;padding:0;border:0}
+  .wcprev{background:#d5dbe1;overflow:auto;padding:16px}
+  @media(prefers-color-scheme:dark){.wcprev{background:#0a1218}}
+  .wc-langs{display:flex;flex-wrap:wrap;gap:6px}
+  .wc-lg{display:flex!important;gap:6px;align-items:center;margin:0!important;padding:8px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx)!important;font-size:14px!important;cursor:pointer}
   .wc-lg input{width:18px;height:18px}
+  .wc-seg{display:flex;gap:6px}.wc-seg button{flex:1;height:44px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font-weight:700;font-size:16px;cursor:pointer}
+  .wc-seg button.on{background:var(--ac);border-color:var(--ac);color:#fff}
   .wc-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;padding:8px;border:1px solid var(--bd);border-radius:10px;background:var(--bg)}
-  .wc-row input[type=date]{grid-column:1/2}.wc-row .wf-ic{grid-column:2/3;justify-self:end;height:44px}
-  .wc-row input{padding:9px;font-size:15px;background:var(--card)}
-  @media(max-width:1330px){.wf-grid{grid-template-columns:272px minmax(0,1fr)}.wf-cardp{grid-column:2;position:static;max-height:none}}
-  @media(max-width:960px){.wf-grid{grid-template-columns:1fr}.wf-cardp{grid-column:auto}}
-  #wcPv{z-index:50;background:#d9dee3;color:#000;padding:0;align-items:center}
-  #wcPv .wcbar{position:sticky;top:0;z-index:2;display:flex;gap:8px;justify-content:center;padding:10px;width:100%;background:#fff;border-bottom:1px solid #ccc}
-  #wcPages{padding:14px 0}
-  @media screen{#wcPages{zoom:.62}}@media screen and (max-width:700px){#wcPages{zoom:.4}}
-  .wcpg{width:210mm;height:297mm;overflow:hidden;background:#fff;color:#000;margin:0 auto 18px;box-shadow:0 2px 14px rgba(0,0,0,.28);font-family:Calibri,Carlito,"Segoe UI",Arial,sans-serif;line-height:1.28}
-  .wcc{box-sizing:border-box;-webkit-box-sizing:border-box;float:left;overflow:hidden;outline:1px dashed #999;outline-offset:-1px}
-  .wcc p{margin:0}.wcc .wcl{display:block;margin:0 auto}.wcc .cr{font-family:"Courier New",monospace;font-weight:700;color:#116cc7}
-  .wcc .step{position:relative}.wcc .step i{position:absolute;left:0;font-style:normal}
-  .wcc .foot,.wcc .phone,.wcc .sign{text-align:center}.wcc .phone{color:#116cc7;font-weight:700}.wcc .sign{font-weight:700}
-  .p1 .wcc{width:210mm;height:297mm;padding:12mm 19mm;font-size:12pt}.p1 .wcl{width:46mm;height:46mm;margin-bottom:6mm}.p1 .head{margin:3mm 0 1.2mm}.p1 .until{margin-bottom:2mm}
-  .p1 .step{padding-left:1.8em;margin-bottom:1mm}.p1 .cr{font-size:16pt}.p1 .phone{font-size:17pt;margin-top:1mm}.p1 .foot{margin-top:1mm}
-  .p2 .wcc{width:210mm;height:148.5mm;padding:4mm 12mm;font-size:8pt}.p2 .wcl{width:16mm;height:16mm;margin-bottom:1.5mm}.p2 .head{margin:1.8mm 0 .6mm}
-  .p2 .step{padding-left:1.7em}.p2 .cr{font-size:11pt}.p2 .phone{font-size:11pt}
-  .p4 .wcc{width:105mm;height:148.5mm;padding:3mm 5mm;font-size:7pt}.p4 .wcl{width:10mm;height:10mm;margin-bottom:1mm}.p4 .head{margin:1.4mm 0 .4mm}
-  .p4 .step{padding-left:1.5em}.p4 .cr{font-size:9pt}.p4 .phone{font-size:9pt}
+  .wc-row input{padding:9px;font-size:15px;background:var(--card)}.wc-row .wf-ic{justify-self:end;height:44px}
+  .wcact{position:sticky;bottom:-16px;background:var(--card);padding:12px 0 4px;margin-top:auto}
+  .wcact .btn{flex:1}.wcact .btn:disabled{opacity:.45;cursor:not-allowed}
+  @media(max-width:860px){.wcdes{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.wcctl{border-right:0;border-bottom:1px solid var(--bd);max-height:50vh}}
+  .wcmeas{position:absolute;left:-10000px;top:0;visibility:hidden;pointer-events:none}
+  /* карточка (размеры в em: шрифт страницы подбирается автоматически) */
+  .wcpg{width:210mm;height:297mm;box-sizing:border-box;padding:7mm;overflow:hidden;background:#fff;color:#12263a;font-family:Calibri,Carlito,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.3;margin:0 auto 18px;box-shadow:0 2px 14px rgba(0,0,0,.3)}
+  .wcrow{display:table;table-layout:fixed;width:calc(100% + 6mm);margin:0 -3mm 3.5mm;border-spacing:3mm 0}
+  .wcc{display:table-cell;vertical-align:top;border:.3mm dashed #7d8a98;background:#fff}.wcc.wce{border:0}
+  .wcc p{margin:0}
+  .wch{background:#eaf3fc;text-align:center;padding:.9em 1em .8em;border-bottom:.2em solid #1b6fc2}
+  .wch img{display:block;margin:0 auto .3em;width:4em;height:4em}
+  .wch h1{margin:0;font-size:1.75em;line-height:1.1;font-weight:800;color:#12263a}
+  .wch .sub{font-size:.9em;color:#4b6075}
+  .wch .net{display:inline-block;margin-top:.55em;padding:.2em .8em;border-radius:2em;background:#1b6fc2;color:#fff;font-size:.9em}
+  .wcg{display:table;table-layout:fixed;width:100%;box-sizing:border-box;border-spacing:.7em 0;margin:.8em 0 0}
+  .wcb{display:table-cell;border:.14em solid #1b6fc2;border-radius:.5em;padding:.4em .5em;text-align:center}
+  .wcb small{display:block;font-size:.78em;color:#4b6075}
+  .wcb b{display:block;font-family:Consolas,"Courier New",monospace;font-size:2em;line-height:1.15;color:#1b6fc2;word-break:break-all}
+  .wcu{text-align:center;margin:.6em 0 .1em;font-size:.95em}.wcu b{background:#fff3cd;padding:.05em .5em;border-radius:.4em}
+  .wcbody{padding:.2em 1em .5em}
+  .wct{display:inline-block;margin:.7em 0 .25em;padding:.08em .55em;border-radius:.3em;background:#12263a;color:#fff;font-size:.8em;font-weight:700}
+  .wchd{margin:.1em 0 .3em!important}
+  .wcs{position:relative;padding-left:1.7em;margin:.18em 0!important}.wcs i{position:absolute;left:0;font-style:normal;font-weight:700;color:#1b6fc2}
+  .wcf{padding:.6em 1em;background:#f3f6f9;border-top:.1em solid #d4dee8;text-align:center;font-size:.85em}
+  .wcf .ph{font-size:1.55em;font-weight:800;color:#1b6fc2;margin-top:.15em}.wcf .sg{font-weight:700}
+  @media screen{.wcpg:last-child{margin-bottom:0}}
   @media print{
     @page{size:A4;margin:0}
     html,body{background:#fff!important}
     body>*:not(#wcPv){display:none!important}
     #wcPv{position:static!important;display:block!important;background:none!important;padding:0!important;overflow:visible!important}
-    #wcPv .wcbar{display:none!important}
-    #wcPages{zoom:1!important;padding:0!important}
+    .wcctl{display:none!important}.wcdes{display:block!important}.wcprev{background:none!important;padding:0!important;overflow:visible!important}
+    #wcPages{zoom:1!important}
     .wcpg{margin:0!important;box-shadow:none!important;page-break-after:always;break-after:page}.wcpg:last-child{page-break-after:auto;break-after:auto}
   }
 </style>
@@ -385,19 +407,9 @@
    </div>
   </div>
   <aside class="wf-cardp"><div class="card">
-   <h2>Карточка Wi-Fi (A4)</h2>
-   <label>Язык инструкции</label>
-   <div class="wc-langs"><label class="wc-lg"><input type="checkbox" value="kk"> Қазақша</label><label class="wc-lg"><input type="checkbox" value="ru"> Русский</label><label class="wc-lg"><input type="checkbox" value="en"> English</label></div>
-   <label>Карточек на листе</label>
-   <select id="wcPer"><option value="1">1 — целый лист</option><option value="2">2 — на листе</option><option value="4">4 — на листе (резать)</option></select>
-   <label>Логин, пароль, активно до</label>
-   <div id="wcRows"></div>
-   <button class="btn sec" id="wcAdd" style="margin-top:8px;width:100%">+ Ещё карточка</button>
-   <details style="margin-top:10px"><summary class="small" style="cursor:pointer">Сеть, телефон, подпись</summary>
-    <label>Название сети</label><input id="wcSsid"><label>Телефон</label><input id="wcPhone"><label>Подпись</label><input id="wcSign">
-   </details>
-   <p class="small">Логины и пароли нигде не сохраняются.</p>
-   <div class="btns"><button class="btn" id="wcPrint">🖨 PDF / печать</button><button class="btn sec" id="wcDoc">⬇ Word (.docx)</button></div>
+   <h2>Карточки Wi-Fi</h2>
+   <p class="small">Памятка для гостя на листе A4: выберите язык, введите логин и пароль, и готовая карточка появится сразу. Дальше печать, PDF или Word.</p>
+   <button class="btn" id="wcOpen" style="width:100%">＋ Создать карточку</button>
   </div></aside>
  </div>
  <div id="wfEd" class="modal"><div class="card">
@@ -455,7 +467,26 @@
 <div class="toast" id="toast"></div>
 <input type="file" id="photo" accept="image/*" capture="environment" class="hide">
 
-<div id="wcPv" class="modal"><div class="wcbar"><button class="btn" id="wcPvP">🖨 Печать / сохранить как PDF</button><button class="btn sec" id="wcPvX">Закрыть</button></div><div id="wcPages"></div></div>
+<div id="wcPv" class="modal"><div class="wcdes">
+ <div class="wcctl">
+  <div class="wcct"><h2>Карточка Wi-Fi</h2><button class="wf-ic" id="wcPvX" title="Закрыть">✕</button></div>
+  <label>Язык инструкции</label>
+  <div class="wc-langs"><label class="wc-lg"><input type="checkbox" value="kk"> Қазақша</label><label class="wc-lg"><input type="checkbox" value="ru"> Русский</label><label class="wc-lg"><input type="checkbox" value="en"> English</label></div>
+  <label>Карточек на листе A4</label>
+  <div class="wc-seg" id="wcSeg"><button data-per="1">1</button><button data-per="2">2</button><button data-per="3">3</button><button data-per="4">4</button><button data-per="6">6</button></div>
+  <label>Логин, пароль, активно до</label>
+  <div id="wcRows"></div>
+  <button class="btn sec" id="wcAdd">+ Ещё карточка</button>
+  <details style="margin-top:12px"><summary class="small" style="cursor:pointer">Сеть, телефон, подпись</summary>
+   <label>Название сети</label><input id="wcSsid"><label>Телефон</label><input id="wcPhone"><label>Подпись</label><input id="wcSign">
+  </details>
+  <p class="small" id="wcMsg" style="color:var(--bad)"></p>
+  <p class="small">Логины и пароли нигде не сохраняются.</p>
+  <div class="btns wcact"><button class="btn" id="wcPvP">🖨 Печать / PDF</button><button class="btn sec" id="wcDoc">⬇ Word (.docx)</button></div>
+ </div>
+ <div class="wcprev" id="wcPrev"><div id="wcPages"></div></div>
+</div></div>
+<div id="wcMeas" class="wcmeas"></div>
 <script>
 /* ============ НАСТРОЙКИ ============ */
 // Можно вписать сюда ссылку /exec, тогда её не придётся вводить на каждом устройстве:
@@ -1891,63 +1922,100 @@ $('#wfImp').onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].te
   wfReg=wfNormalize({recs:j.recs,rejected:j.rejected||[],same:j.same||[],log:j.log||[]});wfSel.clear();await wfCommit()}catch(x){toast('Не удалось прочитать копию')}e.target.value=''};
 /*==WIFI_UI_END==*/
 /*==WIFI_CARD_START==*/
-/* Access card generator (A4, 1/2/4 per sheet). Logins/passwords are never stored: only layout settings are kept in localStorage. */
+/* Access card designer (A4; 1/2/3/4/6 per sheet). Logins and passwords are never stored: only layout settings are kept in localStorage. */
 const WC_LOGO='data:image/png;base64,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';
-const WC_T={
-  kk:{h:'**Wi-Fi желісіне** қосылу және оған кіру үшін мына қадамдарды орындау қажет',s:['Қол жетімді Wi-Fi желілерінің **тізімін ашыңыз**.','**{S}** деп аталатын желіні таңдап, **Қосылу** түймесін басыңыз.','Жүйе автоматты түрде авторизация бетіне бағыттайды.','Мәтінді оқығаннан кейін {L} логинін және {P} құпия сөзін енгізіңіз (немесе есептік жазбаға кіру құрылғыда сақталған болса, жазбаны растыңыз)']},
-  ru:{h:'Для подключения и получения доступа к **беспроводной сети Wi-Fi** вам необходимо выполнить следующие шаги:',s:['**Откройте список** доступных сетей Wi-Fi.','Выберите сеть под названием **{S}** и нажмите **Подключиться**.','После система автоматически переадресует вас на страницу авторизации. (если переадресация не произошла автоматически, попробуйте открыть любую ссылку в браузере)','Ознакомившись с текстом введите логин {L} и пароль {P} (или подтвердите вход, если на устройстве уже сохранён доступ к аккаунту).']},
-  en:{h:'To connect and access a **Wi-Fi network**, you need to follow these steps:',s:['**Open the list** of available Wi-Fi networks.','Select the network called **{S}** and click **Connect**.','After the system will automatically redirect you to the authorization page. (if the redirect didn\'t happen automatically, try opening any link)','Enter the login {L} and the password {P} (or confirm the entry if access to the account is already saved on the device).']}
+const WC_L={
+  kk:{tag:'KZ',sub:'Қонақтарға арналған Wi-Fi',login:'Логин',pass:'Құпия сөз',until:'Белсенді',net:'Желі',
+    prob:'Мәселелер туындаған жағдайда ұялы телефон нөміріне хабарласыңыз.',
+    h:'**Wi-Fi желісіне** қосылу және оған кіру үшін мына қадамдарды орындау қажет',
+    s:['Қол жетімді Wi-Fi желілерінің **тізімін ашыңыз**.','**{S}** деп аталатын желіні таңдап, **Қосылу** түймесін басыңыз.','Жүйе автоматты түрде авторизация бетіне бағыттайды.','Мәтінді оқығаннан кейін жоғарыда көрсетілген **логин** мен **құпия сөзді** енгізіңіз (немесе есептік жазбаға кіру құрылғыда сақталған болса, жазбаны растыңыз).']},
+  ru:{tag:'RU',sub:'Гостевой Wi-Fi',login:'Логин',pass:'Пароль',until:'Активно до',net:'Сеть',
+    prob:'В случае возникновения проблем, обращайтесь по моб номеру телефону.',
+    h:'Для подключения и получения доступа к **беспроводной сети Wi-Fi** вам необходимо выполнить следующие шаги:',
+    s:['**Откройте список** доступных сетей Wi-Fi.','Выберите сеть под названием **{S}** и нажмите **Подключиться**.','После этого система автоматически переадресует вас на страницу авторизации (если переадресация не произошла, попробуйте открыть любую ссылку в браузере).','Ознакомившись с текстом, введите **логин** и **пароль**, указанные выше (или подтвердите вход, если на устройстве уже сохранён доступ к аккаунту).']},
+  en:{tag:'EN',sub:'',login:'Login',pass:'Password',until:'Active until',net:'Network',
+    prob:'In case of problems, please contact the mobile phone number.',
+    h:'To connect and access a **Wi-Fi network**, you need to follow these steps:',
+    s:['**Open the list** of available Wi-Fi networks.','Select the network called **{S}** and click **Connect**.','The system will then automatically redirect you to the authorization page (if the redirect does not happen, try opening any link).','Enter the **login** and **password** shown above (or confirm the entry if access to the account is already saved on the device).']}
 };
-const WC_FOOT={ru:'В случае возникновения проблем, обращайтесь по моб номеру телефону.',en:'In case of problems, please contact the mobile phone number.',kk:'Мәселелер туындаған жағдайда ұялы телефон нөміріне хабарласыңыз.'};
 const WC_DEF={ssid:'BIRLIK_GUEST',phone:'+7 701 071 63 38',sign:'Malik/Sarsen, IT Specialist',langs:['kk','ru','en'],per:'1'};
+const WC_FS={1:11,2:8.8,3:7.8,4:7.6,6:6.6};   // starting font size (pt); the preview shrinks it until every page fits
 const wcCfg=()=>Object.assign({},WC_DEF,load('wf_card_cfg',{}));
-function wcSegs(t,c,cfg){
-  return t.replace(/\{S\}/g,cfg.ssid).split(/(\*\*.+?\*\*|\{[LP]\})/).filter(Boolean)
-    .map(p=>p==='{L}'?{t:c.l,cr:1}:p==='{P}'?{t:c.p,cr:1}:p.startsWith('**')?{t:p.slice(2,-2),b:1}:{t:p});
+const wcRich=(t,cfg)=>t.replace(/\{S\}/g,cfg.ssid).split(/(\*\*.+?\*\*)/).filter(Boolean).map(p=>p.startsWith('**')?{t:p.slice(2,-2),b:1}:{t:p});
+// One card = one model; the HTML preview/print and the Word file are both built from it.
+function wcModel(cfg,c){
+  const langs=['kk','ru','en'].filter(k=>cfg.langs.includes(k)),j=f=>[...new Set(langs.map(k=>WC_L[k][f]))].join(' / ');
+  return {multi:langs.length>1,sub:langs.filter(k=>WC_L[k].sub).map(k=>WC_L[k].sub).join(' · '),net:{label:j('net'),name:cfg.ssid},
+    creds:[{label:j('login'),value:c.l},{label:j('pass'),value:c.p}],until:{label:j('until'),date:c.d?wfRu(c.d):'__________'},
+    langs:langs.map(k=>({tag:WC_L[k].tag,head:wcRich(WC_L[k].h,cfg),steps:WC_L[k].s.map(s=>wcRich(s,cfg))})),
+    foot:{lines:['ru','en','kk'].filter(k=>langs.includes(k)).map(k=>WC_L[k].prob),phone:cfg.phone,sign:cfg.sign}};
 }
-// One card = list of typed lines; HTML and Word are both built from it.
-function wcLines(cfg,c){
-  const L=[],langs=['kk','ru','en'].filter(k=>cfg.langs.includes(k));
-  L.push({k:'until',segs:[{t:'Осы уақытқа дейін белсенді/Active until/Активно до: '},c.d?{t:wfRu(c.d),b:1}:{t:'__________'}]});
-  langs.forEach(k=>{L.push({k:'head',segs:wcSegs(WC_T[k].h,c,cfg)});WC_T[k].s.forEach((s,i)=>L.push({k:'step',n:i+1,segs:wcSegs(s,c,cfg)}))});
-  ['ru','en','kk'].filter(k=>langs.includes(k)).forEach(k=>L.push({k:'foot',segs:[{t:WC_FOOT[k]}]}));
-  L.push({k:'phone',segs:[{t:cfg.phone}]},{k:'sign',segs:[{t:cfg.sign}]});
-  return L;
+const wcH=segs=>segs.map(s=>s.b?'<b>'+esc(s.t)+'</b>':esc(s.t)).join('');
+function wcCardHtml(m){
+  return '<div class="wcc"><div class="wch"><img src="'+WC_LOGO+'" alt=""><h1>Guest Wi-Fi</h1>'+(m.sub?'<div class="sub">'+esc(m.sub)+'</div>':'')
+    +'<div class="net">'+esc(m.net.label)+': <b>'+esc(m.net.name)+'</b></div></div>'
+    +'<div class="wcg">'+m.creds.map(x=>'<div class="wcb"><small>'+esc(x.label)+'</small><b>'+esc(x.value)+'</b></div>').join('')+'</div>'
+    +'<div class="wcu">'+esc(m.until.label)+': <b>'+esc(m.until.date)+'</b></div>'
+    +'<div class="wcbody">'+m.langs.map(l=>(m.multi?'<span class="wct">'+l.tag+'</span>':'')+'<p class="wchd">'+wcH(l.head)+'</p>'
+      +l.steps.map((s,i)=>'<p class="wcs"><i>'+(i+1)+'.</i>'+wcH(s)+'</p>').join('')).join('')+'</div>'
+    +'<div class="wcf">'+m.foot.lines.map(x=>'<div>'+esc(x)+'</div>').join('')+'<div class="ph">'+esc(m.foot.phone)+'</div><div class="sg">'+esc(m.foot.sign)+'</div></div></div>';
 }
-const wcH=segs=>segs.map(s=>{const e=esc(s.t);return s.cr?'<span class="cr">'+e+'</span>':s.b?'<b>'+e+'</b>':e}).join('');
-function wcPagesHtml(cfg,cards){
-  const per=+cfg.per,out=[];
-  for(let i=0;i<cards.length;i+=per)out.push('<div class="wcpg p'+per+'">'+cards.slice(i,i+per).map(c=>
-    '<div class="wcc"><img class="wcl" src="'+WC_LOGO+'" alt="">'+wcLines(cfg,c).map(l=>'<p class="'+l.k+'">'+(l.n?'<i>'+l.n+'.</i>':'')+wcH(l.segs)+'</p>').join('')+'</div>').join('')+'</div>');
+function wcPagesHtml(cfg,cards,fs){
+  const per=+cfg.per,cols=per>=4?2:1,out=[];
+  for(let i=0;i<cards.length;i+=per){
+    const cells=cards.slice(i,i+per).map(c=>wcCardHtml(wcModel(cfg,c)));let rows='';
+    for(let r=0;r<cells.length;r+=cols){const row=cells.slice(r,r+cols);while(row.length<cols)row.push('<div class="wcc wce"></div>');rows+='<div class="wcrow">'+row.join('')+'</div>'}
+    out.push('<div class="wcpg" style="font-size:'+fs+'pt">'+rows+'</div>');
+  }
   return out.join('');
 }
+// Font sizes for Word, picked by test-rendering every layout (cards per sheet x number of languages) so nothing spills onto a second page.
+const WC_B={1:[22,26,26],2:[13,16,20],3:[0,0,14],4:[11,14,19],6:[0,0,13]};   // [3 languages, 2 languages, 1 language]; 0 = does not fit legibly
 async function wcDocx(cfg,cards){
-  const per=+cfg.per,S={1:{b:24,c:32,p:34,logo:1530000,sa:70,hb:140},2:{b:16,c:22,p:22,logo:600000,sa:20,hb:50},4:{b:14,c:18,p:18,logo:380000,sa:10,hb:30}}[per];
-  const F=o=>'<w:rFonts w:ascii="'+o+'" w:hAnsi="'+o+'" w:cs="'+o+'"/>';
-  const run=(t,o)=>{o=o||{};const sz=o.sz||S.b,f=o.cr?'Courier New':'Calibri';
-    return '<w:r><w:rPr>'+F(f)+(o.b||o.cr?'<w:b/><w:bCs/>':'')+(o.col?'<w:color w:val="'+o.col+'"/>':'')+'<w:sz w:val="'+sz+'"/><w:szCs w:val="'+sz+'"/></w:rPr><w:t xml:space="preserve">'+xmlEscape(t)+'</w:t></w:r>'};
-  const para=(runs,o)=>{o=o||{};return '<w:p><w:pPr><w:spacing w:before="'+(o.bf||0)+'" w:after="'+(o.af==null?S.sa:o.af)+'" w:line="240" w:lineRule="auto"/>'+(o.ind?'<w:ind w:left="'+o.ind+'" w:hanging="'+o.ind+'"/>':'')+(o.jc?'<w:jc w:val="'+o.jc+'"/>':'')+'</w:pPr>'+runs+'</w:p>'};
-  const sr=(segs,sz)=>segs.map(s=>run(s.t,{b:s.b,cr:s.cr,col:s.cr?'116CC7':null,sz:s.cr?S.c:sz})).join('');
-  const logo='<w:p><w:pPr><w:spacing w:before="0" w:after="'+S.hb+'"/><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+S.logo+'" cy="'+S.logo+'"/><wp:docPr id="1" name="Wi-Fi"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="logo.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+S.logo+'" cy="'+S.logo+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
-  const card=c=>logo+wcLines(cfg,c).map(l=>{
-    if(l.k==='step')return para(run(l.n+'.\t')+sr(l.segs),{ind:per===4?260:360});
-    if(l.k==='head')return para(sr(l.segs),{bf:S.hb});
-    if(l.k==='phone')return para(run(cfg.phone,{b:1,col:'116CC7',sz:S.p}),{jc:'center'});
-    if(l.k==='sign')return para(run(cfg.sign,{b:1}),{jc:'center'});
-    if(l.k==='foot')return para(sr(l.segs),{jc:'center',af:0});
-    return para(sr(l.segs));
-  }).join('');
-  const cols=per===4?2:1,rows=per===1?1:2,W=11006,cw=Math.floor(W/cols),H=per===1?15450:7700;
-  const bd='<w:tcBorders>'+['top','left','bottom','right'].map(s=>'<w:'+s+' w:val="dashed" w:sz="4" w:space="0" w:color="999999"/>').join('')+'</w:tcBorders>';
-  const mar=per===1?[300,520]:per===2?[160,420]:[120,200];
-  const tc=c=>'<w:tc><w:tcPr><w:tcW w:w="'+cw+'" w:type="dxa"/>'+bd+'<w:tcMar><w:top w:w="'+mar[0]+'" w:type="dxa"/><w:left w:w="'+mar[1]+'" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:right w:w="'+mar[1]+'" w:type="dxa"/></w:tcMar></w:tcPr>'+(c?card(c):'<w:p/>')+'</w:tc>';
-  const tiny='<w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr>';
+  const per=+cfg.per,cols=per>=4?2:1,nl=Math.min(3,Math.max(1,cfg.langs.length)),b=WC_B[per][3-nl];
+  if(!b)throw new Error('Столько текста не помещается на карточку. Выберите меньше языков или меньше карточек на листе.');
+  const sz=k=>Math.max(8,Math.round(b*k)),ACC='1B6FC2',INK='12263A',MUT='4B6075';
+  let did=0;
+  const F=f=>'<w:rFonts w:ascii="'+f+'" w:hAnsi="'+f+'" w:cs="'+f+'"/>';
+  const r=(t,o)=>{o=o||{};const z=o.sz||b;return '<w:r><w:rPr>'+F(o.mono?'Courier New':'Calibri')+(o.b||o.mono?'<w:b/><w:bCs/>':'')+'<w:color w:val="'+(o.col||INK)+'"/><w:sz w:val="'+z+'"/><w:szCs w:val="'+z+'"/>'+(o.fill?'<w:shd w:val="clear" w:color="auto" w:fill="'+o.fill+'"/>':'')+'</w:rPr><w:t xml:space="preserve">'+xmlEscape(t)+'</w:t></w:r>'};
+  const p=(runs,o)=>{o=o||{};return '<w:p><w:pPr><w:keepLines/><w:spacing w:before="'+(o.bf||0)+'" w:after="'+(o.af||0)+'" w:line="'+(o.ln||250)+'" w:lineRule="auto"/>'+(o.hang?'<w:ind w:left="'+o.hang+'" w:hanging="'+o.hang+'"/>':'')+(o.jc?'<w:jc w:val="'+o.jc+'"/>':'')+'</w:pPr>'+runs+'</w:p>'};
+  const segs=(a,o)=>a.map(s=>r(s.t,Object.assign({b:s.b},o))).join('');
+  const tiny='<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr></w:p>';
+  const logoEmu=Math.round(b*0.95*36000);
+  const logo=()=>{did++;return '<w:p><w:pPr><w:spacing w:before="0" w:after="'+Math.round(b*4)+'"/><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+logoEmu+'" cy="'+logoEmu+'"/><wp:docPr id="'+did+'" name="Wi-Fi '+did+'"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="logo.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+logoEmu+'" cy="'+logoEmu+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>'};
+  const W=11106,SP=90,cw=Math.floor((W-(cols+1)*SP)/cols),PAD=Math.round(cw*0.035),GAP=Math.round(cw*0.02),HW=Math.floor((cw-2*PAD-GAP)/2);
+  const bd=(c,w,v)=>'<w:tcBorders>'+['top','left','bottom','right'].map(x=>'<w:'+x+' w:val="'+(v||'single')+'" w:sz="'+w+'" w:space="0" w:color="'+c+'"/>').join('')+'</w:tcBorders>';
+  const nob='<w:tcBorders>'+['top','left','bottom','right'].map(x=>'<w:'+x+' w:val="nil"/>').join('')+'</w:tcBorders>';
+  const tc=(w,span,o,inner)=>'<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/>'+(span>1?'<w:gridSpan w:val="'+span+'"/>':'')+(o.bd||nob)+(o.fill?'<w:shd w:val="clear" w:color="auto" w:fill="'+o.fill+'"/>':'')+'<w:tcMar><w:top w:w="'+(o.t||0)+'" w:type="dxa"/><w:left w:w="'+(o.l||0)+'" w:type="dxa"/><w:bottom w:w="'+(o.bm||0)+'" w:type="dxa"/><w:right w:w="'+(o.l||0)+'" w:type="dxa"/></w:tcMar></w:tcPr>'+inner+'</w:tc>';
+  const row=cells=>'<w:tr><w:trPr><w:cantSplit/></w:trPr>'+cells+'</w:tr>';
+  const card=c=>{
+    const m=wcModel(cfg,c),pad=Math.round(b*14),span5=cw;
+    const head=logo()+p(r('Guest Wi-Fi',{sz:sz(1.75),b:1}),{jc:'center'})+(m.sub?p(r(m.sub,{sz:sz(0.9),col:MUT}),{jc:'center'}):'')
+      +p(r(' '+m.net.label+': ',{sz:sz(0.9),col:'FFFFFF',fill:ACC})+r(m.net.name+' ',{sz:sz(0.95),col:'FFFFFF',fill:ACC,b:1}),{jc:'center',bf:Math.round(b*5)});
+    const cb=v=>bd(ACC,12);
+    const cred=x=>p(r(x.label,{sz:sz(0.78),col:MUT}),{jc:'center'})+p(r(x.value,{sz:sz(2),mono:1,col:ACC}),{jc:'center',ln:240});
+    let body='';
+    m.langs.forEach((l,i)=>{
+      if(m.multi)body+=p(r(' '+l.tag+' ',{sz:sz(0.85),b:1,col:'FFFFFF',fill:INK}),{bf:i?Math.round(b*6):0,af:Math.round(b*2)});
+      body+=p(segs(l.head,{}),{bf:m.multi?0:0,af:Math.round(b*2)});
+      l.steps.forEach((s,k)=>{body+=p(r((k+1)+'.\t',{b:1,col:ACC})+segs(s,{}),{hang:Math.round(b*14),af:Math.round(b*1.5)})});
+    });
+    const foot=m.foot.lines.map(x=>p(r(x,{sz:sz(0.88)}),{jc:'center'})).join('')+p(r(m.foot.phone,{sz:sz(1.5),b:1,col:ACC}),{jc:'center',bf:Math.round(b*2)})+p(r(m.foot.sign,{sz:sz(0.95),b:1}),{jc:'center'});
+    return '<w:tbl><w:tblPr><w:tblW w:w="'+cw+'" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="'+PAD+'"/><w:gridCol w:w="'+HW+'"/><w:gridCol w:w="'+GAP+'"/><w:gridCol w:w="'+HW+'"/><w:gridCol w:w="'+PAD+'"/></w:tblGrid>'
+      +row(tc(cw,5,{fill:'EAF3FC',t:Math.round(b*10),bm:Math.round(b*9),l:PAD,bd:'<w:tcBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="single" w:sz="18" w:space="0" w:color="'+ACC+'"/><w:right w:val="nil"/></w:tcBorders>'},head))
+      +row(tc(PAD,1,{t:Math.round(b*8)},'<w:p/>')+tc(HW,1,{bd:cb(),t:Math.round(b*5),bm:Math.round(b*5),l:60},cred(m.creds[0]))+tc(GAP,1,{},'<w:p/>')+tc(HW,1,{bd:cb(),t:Math.round(b*5),bm:Math.round(b*5),l:60},cred(m.creds[1]))+tc(PAD,1,{},'<w:p/>'))
+      +row(tc(cw,5,{t:Math.round(b*6),l:PAD},p(r(m.until.label+': ',{sz:sz(0.95)})+r(' '+m.until.date+' ',{b:1,fill:'FFF3CD'}),{jc:'center'})))
+      +row(tc(cw,5,{t:Math.round(b*4),l:PAD,bm:Math.round(b*4)},body))
+      +row(tc(cw,5,{fill:'F3F6F9',t:Math.round(b*6),bm:Math.round(b*6),l:PAD,bd:'<w:tcBorders><w:top w:val="single" w:sz="6" w:space="0" w:color="D4DEE8"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/></w:tcBorders>'},foot))
+      +'</w:tbl>'+tiny;
+  };
+  const cut=bd('8895A3',6,'dashed');
   let body='';const pages=Math.ceil(cards.length/per);
-  for(let p=0;p<pages;p++){
-    body+='<w:tbl><w:tblPr><w:tblW w:w="'+W+'" w:type="dxa"/><w:jc w:val="center"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+('<w:gridCol w:w="'+cw+'"/>').repeat(cols)+'</w:tblGrid>';
-    for(let r=0;r<rows;r++){body+='<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="'+H+'" w:hRule="exact"/></w:trPr>';
-      for(let q=0;q<cols;q++)body+=tc(cards[p*per+r*cols+q]);body+='</w:tr>'}
-    body+='</w:tbl><w:p>'+tiny+(p<pages-1?'<w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:br w:type="page"/></w:r>':'')+'</w:p>';
+  for(let pg=0;pg<pages;pg++){
+    const chunk=cards.slice(pg*per,pg*per+per),rows=Math.ceil(chunk.length/cols);
+    body+='<w:tbl><w:tblPr><w:tblW w:w="'+W+'" w:type="dxa"/><w:jc w:val="center"/><w:tblCellSpacing w:w="'+SP+'" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+('<w:gridCol w:w="'+cw+'"/>').repeat(cols)+'</w:tblGrid>';
+    for(let y=0;y<rows;y++){let cells='';for(let x=0;x<cols;x++){const c=chunk[y*cols+x];cells+=c?tc(cw,1,{bd:cut},card(c)):tc(cw,1,{},'<w:p/>')}body+=row(cells)}
+    body+='</w:tbl><w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr>'+(pg<pages-1?'<w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:br w:type="page"/></w:r>':'')+'</w:p>';
   }
   const NS='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"';
   const X='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',R='http://schemas.openxmlformats.org/',zip=new JSZip();
@@ -1955,33 +2023,65 @@ async function wcDocx(cfg,cards){
   zip.file('_rels/.rels',X+'<Relationships xmlns="'+R+'package/2006/relationships"><Relationship Id="rId1" Type="'+R+'officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
   zip.file('word/_rels/document.xml.rels',X+'<Relationships xmlns="'+R+'package/2006/relationships"><Relationship Id="rId1" Type="'+R+'officeDocument/2006/relationships/image" Target="media/logo.png"/><Relationship Id="rId2" Type="'+R+'officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
   zip.file('word/styles.xml',X+'<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr>'+F('Calibri')+'<w:sz w:val="22"/><w:lang w:val="ru-RU" w:eastAsia="ru-RU" w:bidi="ar-SA"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>');
-  zip.file('word/document.xml',X+'<w:document '+NS+'><w:body>'+body+'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="450" w:right="450" w:bottom="450" w:left="450" w:header="0" w:footer="0" w:gutter="0"/></w:sectPr></w:body></w:document>');
+  zip.file('word/document.xml',X+'<w:document '+NS+'><w:body>'+body+'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="400" w:right="400" w:bottom="400" w:left="400" w:header="0" w:footer="0" w:gutter="0"/></w:sectPr></w:body></w:document>');
   zip.file('word/media/logo.png',WC_LOGO.split(',')[1],{base64:true});
   return zip.generateAsync({type:'uint8array',compression:'DEFLATE'});
 }
-// ---- panel wiring ----
-let wcRows=[{l:'',p:'',d:''}];
-function wcRender(){
-  $('#wcRows').innerHTML=wcRows.map((r,i)=>'<div class="wc-row"><input data-wcr="'+i+'" data-k="l" placeholder="Логин" value="'+esc(r.l)+'" autocomplete="off"><input data-wcr="'+i+'" data-k="p" placeholder="Пароль" value="'+esc(r.p)+'" autocomplete="off"><input type="date" data-wcr="'+i+'" data-k="d" title="Активно до" value="'+esc(r.d)+'"><button class="wf-ic" data-wcx="'+i+'" title="Убрать">✕</button></div>').join('');
+
+// ---- designer (opens from the right panel): language, cards per sheet, logins -> live A4 preview ----
+const WC_MINPT=5.5;
+let wcRows=[{l:'',p:'',d:''}],wcPer='1',wcT=0;
+function wcFit(cfg,cards){
+  const meas=$('#wcMeas');let fs=WC_FS[cfg.per],ok=true;meas.innerHTML=wcPagesHtml(cfg,cards,fs);
+  for(let i=0;i<40;i++){
+    const bad=[...meas.children].some(p=>p.scrollHeight>p.clientHeight+1);if(!bad)break;
+    fs*=.95;if(fs<WC_MINPT){ok=false;break}
+    meas.querySelectorAll('.wcpg').forEach(p=>{p.style.fontSize=fs+'pt'});
+  }
+  const html=wcPagesHtml(cfg,cards,Math.max(fs,WC_MINPT));meas.innerHTML='';return {html,ok};
 }
-function wcCollect(){
-  const cfg=Object.assign(wcCfg(),{ssid:$('#wcSsid').value.trim()||WC_DEF.ssid,phone:$('#wcPhone').value.trim(),sign:$('#wcSign').value.trim(),per:$('#wcPer').value,langs:[...document.querySelectorAll('#tab-wifi .wc-lg input:checked')].map(x=>x.value)});
-  save('wf_card_cfg',{ssid:cfg.ssid,phone:cfg.phone,sign:cfg.sign,per:cfg.per,langs:cfg.langs});
-  const cards=wcRows.filter(r=>r.l.trim()||r.p.trim());
-  if(!cfg.langs.length){toast('Выберите язык инструкции');return null}
-  if(!cards.length||cards.some(r=>!r.l.trim()||!r.p.trim())){toast('Заполните логин и пароль в каждой карточке');return null}
-  return {cfg,cards:cards.map(r=>({l:r.l.trim(),p:r.p.trim(),d:r.d}))};
+function wcCfgRead(){
+  return Object.assign(wcCfg(),{ssid:$('#wcSsid').value.trim()||WC_DEF.ssid,phone:$('#wcPhone').value.trim(),sign:$('#wcSign').value.trim(),per:wcPer,
+    langs:[...document.querySelectorAll('#wcPv .wc-lg input:checked')].map(x=>x.value)});
+}
+function wcZoom(){const w=$('#wcPrev').clientWidth-32;$('#wcPages').style.zoom=Math.min(1,Math.max(.25,w/793.7))}
+function wcRefresh(now){
+  clearTimeout(wcT);
+  const run=()=>{
+    const cfg=wcCfgRead();save('wf_card_cfg',{ssid:cfg.ssid,phone:cfg.phone,sign:cfg.sign,per:cfg.per,langs:cfg.langs});
+    const filled=wcRows.every(r=>r.l.trim()&&r.p.trim());
+    const cards=wcRows.map(r=>({l:r.l.trim()||'00000',p:r.p.trim()||'0000',d:r.d}));
+    let msg='',okP=true,okD=true;
+    if(!cfg.langs.length){$('#wcPages').innerHTML='';$('#wcMsg').textContent='Выберите хотя бы один язык инструкции.';$('#wcPvP').disabled=$('#wcDoc').disabled=true;return}
+    const fit=wcFit(cfg,cards);$('#wcPages').innerHTML=fit.html;
+    if(!fit.ok){okP=false;msg='Текст не помещается на карточку. Выберите меньше языков или меньше карточек на листе.'}
+    if(!WC_B[cfg.per][3-Math.min(3,cfg.langs.length)]){okD=false;msg=msg||'Для Word такая комбинация не помещается. Выберите меньше языков или карточек.'}
+    if(!filled){okP=okD=false;msg='Введите логин и пароль в каждой карточке. Сейчас в предпросмотре примерные значения.'}
+    $('#wcMsg').textContent=msg;$('#wcPvP').disabled=!okP;$('#wcDoc').disabled=!okD;wcZoom();
+  };
+  now?run():wcT=setTimeout(run,160);
+}
+function wcRowsRender(){
+  $('#wcRows').innerHTML=wcRows.map((r,i)=>'<div class="wc-row"><input data-wcr="'+i+'" data-k="l" placeholder="Логин" value="'+esc(r.l)+'" autocomplete="off"><input data-wcr="'+i+'" data-k="p" placeholder="Пароль" value="'+esc(r.p)+'" autocomplete="off"><input type="date" data-wcr="'+i+'" data-k="d" title="Активно до" value="'+esc(r.d)+'"><button class="wf-ic" data-wcx="'+i+'" title="Убрать карточку">✕</button></div>').join('');
 }
 (function(){
-  const c=wcCfg();$('#wcSsid').value=c.ssid;$('#wcPhone').value=c.phone;$('#wcSign').value=c.sign;$('#wcPer').value=c.per;
-  document.querySelectorAll('#tab-wifi .wc-lg input').forEach(x=>x.checked=c.langs.includes(x.value));wcRender();
-  $('#wcRows').addEventListener('input',e=>{const t=e.target;if(t.dataset.wcr!=null)wcRows[+t.dataset.wcr][t.dataset.k]=t.value});
-  $('#wcRows').addEventListener('click',e=>{const b=e.target.closest('[data-wcx]');if(b){wcRows.splice(+b.dataset.wcx,1);if(!wcRows.length)wcRows.push({l:'',p:'',d:''});wcRender()}});
-  $('#wcAdd').onclick=()=>{wcRows.push({l:'',p:'',d:wcRows[wcRows.length-1].d});wcRender()};
-  $('#wcPrint').onclick=()=>{const v=wcCollect();if(!v)return;$('#wcPages').innerHTML=wcPagesHtml(v.cfg,v.cards);$('#wcPv').classList.add('on')};
+  const c=wcCfg();wcPer=String(c.per);$('#wcSsid').value=c.ssid;$('#wcPhone').value=c.phone;$('#wcSign').value=c.sign;
+  document.querySelectorAll('#wcPv .wc-lg input').forEach(x=>{x.checked=c.langs.includes(x.value)});
+  const seg=()=>document.querySelectorAll('#wcSeg button').forEach(b=>b.classList.toggle('on',b.dataset.per===wcPer));seg();wcRowsRender();
+  $('#wcSeg').onclick=e=>{const b=e.target.closest('[data-per]');if(b){wcPer=b.dataset.per;seg();wcRefresh(true)}};
+  $('#wcRows').addEventListener('input',e=>{const t=e.target;if(t.dataset.wcr!=null){wcRows[+t.dataset.wcr][t.dataset.k]=t.value;wcRefresh()}});
+  $('#wcRows').addEventListener('click',e=>{const b=e.target.closest('[data-wcx]');if(b){wcRows.splice(+b.dataset.wcx,1);if(!wcRows.length)wcRows.push({l:'',p:'',d:''});wcRowsRender();wcRefresh(true)}});
+  $('#wcPv').addEventListener('change',e=>{if(e.target.closest('.wc-lg')||e.target.closest('details'))wcRefresh(true)});
+  ['wcSsid','wcPhone','wcSign'].forEach(id=>$('#'+id).oninput=()=>wcRefresh());
+  $('#wcAdd').onclick=()=>{wcRows.push({l:'',p:'',d:wcRows[wcRows.length-1].d});wcRowsRender();wcRefresh(true)};
+  $('#wcOpen').onclick=()=>{$('#wcPv').classList.add('on');wcRefresh(true)};
   $('#wcPvX').onclick=()=>$('#wcPv').classList.remove('on');
   $('#wcPvP').onclick=()=>window.print();
-  $('#wcDoc').onclick=async()=>{const v=wcCollect();if(!v)return;saveBytes(await wcDocx(v.cfg,v.cards),'WiFi cards '+wfToday()+'.docx');toast('Word-файл создан ✓')};
+  $('#wcDoc').onclick=async()=>{
+    try{saveBytes(await wcDocx(wcCfgRead(),wcRows.map(r=>({l:r.l.trim(),p:r.p.trim(),d:r.d}))),'WiFi cards '+wfToday()+'.docx');toast('Word-файл создан ✓')}
+    catch(e){toast(e.message)}
+  };
+  window.addEventListener('resize',()=>{if($('#wcPv').classList.contains('on'))wcZoom()});
 })();
 /*==WIFI_CARD_END==*/
 
