@@ -262,6 +262,18 @@
   .badge.off{background:var(--bd);color:var(--mut)}
   .rolesel{margin-top:6px;max-width:280px}
 </style>
+<style>
+  /* ===== Wi-Fi: панели не налезают друг на друга ===== */
+  .wf-grid>*{min-width:0}
+  .wf-main,.wf-side,.wf-cardp{grid-template-columns:minmax(0,1fr)}
+  .wf-tools>*{min-width:0;width:100%}
+  .wf-tbl{overflow-x:auto}
+  @media(min-width:761px){.wf-head,.wf-row{min-width:820px}}
+  @media(min-width:761px) and (max-width:1560px){
+    .wf-head,.wf-row{grid-template-columns:34px minmax(100px,1.2fr) 54px 88px 88px 70px 116px minmax(80px,1fr) 118px;min-width:760px}
+    .c-cls,.wf-head>span:nth-child(4){display:none}
+  }
+</style>
 </head>
 <body>
 <header>
