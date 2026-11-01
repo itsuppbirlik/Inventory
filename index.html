@@ -337,6 +337,23 @@
   @media (prefers-reduced-motion:reduce){*{transition:none!important}button.btn:active{transform:none}}
   @media print{.wcpg *{letter-spacing:normal}}
 </style>
+<style>
+  /* ===== Wi-Fi: больше рабочей зоны, иконки действий всегда видны ===== */
+  body.wide main{max-width:none;padding:14px 16px}
+  .wf-grid{grid-template-columns:232px minmax(0,1fr) 232px;gap:14px}
+  @media(max-width:1330px){.wf-grid{grid-template-columns:232px minmax(0,1fr)}}
+  @media(max-width:960px){.wf-grid{grid-template-columns:1fr}}
+  @media(min-width:761px){
+    .wf-head,.wf-row{grid-template-columns:30px minmax(96px,1.2fr) 50px minmax(56px,.7fr) 84px 84px 64px 112px minmax(70px,1fr) 116px;gap:6px;min-width:0;padding:9px 8px}
+    .c-act{gap:4px;justify-content:flex-end}.c-act .wf-ic{min-width:32px;height:32px;padding:0 6px}
+    .c-left{white-space:nowrap}
+    .c-cls,.wf-head>span:nth-child(4){display:block}
+  }
+  @media(min-width:761px) and (max-width:1250px){
+    .wf-head,.wf-row{grid-template-columns:30px minmax(96px,1.2fr) 50px 84px 84px 64px 112px minmax(70px,1fr) 116px}
+    .c-cls,.wf-head>span:nth-child(4){display:none}
+  }
+</style>
 </head>
 <body>
 <header>
