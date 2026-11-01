@@ -999,7 +999,7 @@ button.tb-logo:focus-visible,button.tb-ava:focus-visible{outline:2px solid var(-
   <div id="wcRows"></div>
   <button class="btn sec" id="wcAdd">+ Ещё карточка</button>
   <details style="margin-top:12px"><summary class="small" style="cursor:pointer">Сеть, телефон, подпись</summary>
-   <label>Название сети</label><input id="wcSsid"><label>Защита сети (для QR-кода)</label><select id="wcSec"><option value="nopass">Открытая — вход через страницу авторизации</option><option value="WPA">WPA/WPA2 — с паролем сети</option></select><label id="wcKeyL" class="hide">Пароль сети<input id="wcKey" autocomplete="off" spellcheck="false"></label><label>Телефон</label><input id="wcPhone"><label>Подпись</label><input id="wcSign">
+   <label>Название сети</label><input id="wcSsid"><label>Имя сети для QR-кода (точно как в списке Wi-Fi)</label><input id="wcQssid" autocomplete="off" spellcheck="false"><label>Защита сети (для QR-кода)</label><select id="wcSec"><option value="nopass">Открытая — вход через страницу авторизации</option><option value="WPA">WPA/WPA2 — с паролем сети</option></select><label id="wcKeyL" class="hide">Пароль сети<input id="wcKey" autocomplete="off" spellcheck="false"></label><label>Телефон</label><input id="wcPhone"><label>Подпись</label><input id="wcSign">
   </details>
   <p class="small" id="wcMsg" style="color:var(--bad)"></p>
   <p class="small">Логины и пароли не отправляются на сервер и не сохраняются в браузере. При закрытии редактора очищаются. Скачанный Word и PDF содержат введённые данные — храните их безопасно.</p>
@@ -2950,7 +2950,7 @@ const WC_SZ={
   a7:{t:'Компактная',d:'10 × 7 см',n:8,mini:1,fs:{1:9,2:8.5,3:8}},
   biz:{t:'Визитка',d:'10 × 5,7 см',n:10,mini:1,fs:{1:8.5,2:8,3:7.5}}
 };
-const WC_DEF={ssid:'BIRLIK_GUEST',phone:'+7 701 071 63 38',sign:'Malik/Sarsen, IT Specialist',langs:['kk','ru','en'],size:'a6',qr:true,sec:'nopass',key:''};
+const WC_DEF={ssid:'BIRLIK_GUEST',phone:'+7 701 071 63 38',sign:'Malik/Sarsen, IT Specialist',langs:['kk','ru','en'],size:'a6',qr:true,sec:'nopass',key:'',qssid:'BIRLIK GUEST'};
 const WC_B={a5:{n:[15,18,21],q:[14,17,20]},a6:{n:[11,14,17],q:[10,13,17]},a7:{n:[15,17,19],q:[12,15,18]},biz:{n:[13,13,14],q:[10,12,13]}};   // Word font size (half-points) per size: [3 languages, 2, 1]; 0 = does not fit legibly
 const wcSize=c=>WC_SZ[c.size]?c.size:WC_DEF.size;
 const wcCfg=()=>{const c=Object.assign({},WC_DEF,load('wf_card_cfg',{}));c.size=wcSize(c);c.per=String(WC_SZ[c.size].n);return c};
@@ -3006,7 +3006,8 @@ function qrMatrix(text){
   apply(best);fmt(best);return M;
 }
 const wcQrEsc=s=>String(s).replace(/([\\;,:"])/g,'\\$1');
-const wcQrText=cfg=>'WIFI:T:'+(cfg.sec==='WPA'?'WPA':'nopass')+';S:'+wcQrEsc(cfg.ssid)+';'+(cfg.sec==='WPA'?'P:'+wcQrEsc(cfg.key||'')+';':'')+';';
+// Same field order as the QR that Android shows for a saved network: WIFI:S:<name>;T:<type>;P:<password>;H:false;;
+const wcQrText=cfg=>'WIFI:S:'+wcQrEsc(cfg.qssid||cfg.ssid)+';T:'+(cfg.sec==='WPA'?'WPA':'nopass')+';P:'+(cfg.sec==='WPA'?wcQrEsc(cfg.key||''):'')+';H:false;;';
 function wcQrSvg(t){const M=qrMatrix(t),N=M.length,q=2;let d='';M.forEach((r,y)=>r.forEach((v,x)=>{if(v)d+='M'+(x+q)+' '+(y+q)+'h1v1h-1z'}));
   return '<svg viewBox="0 0 '+(N+2*q)+' '+(N+2*q)+'" shape-rendering="crispEdges" aria-label="QR"><path fill="#0b2545" d="'+d+'"/></svg>'}
 function wcQrPng(t){const M=qrMatrix(t),N=M.length,q=2,s=12,c=document.createElement('canvas');c.width=c.height=(N+2*q)*s;const g=c.getContext('2d');
@@ -3158,14 +3159,14 @@ function wcFit(cfg,cards){
   const html=wcPagesHtml(cfg,cards,Math.max(fs,WC_MINPT));meas.innerHTML='';return {html,ok};
 }
 function wcCfgRead(){
-  return Object.assign(wcCfg(),{ssid:$('#wcSsid').value.trim()||WC_DEF.ssid,phone:$('#wcPhone').value.trim(),sign:$('#wcSign').value.trim(),size:wcSz,per:String(WC_SZ[wcSz].n),qr:$('#wcQr').checked,sec:$('#wcSec').value,key:$('#wcKey').value,
+  return Object.assign(wcCfg(),{ssid:$('#wcSsid').value.trim()||WC_DEF.ssid,qssid:$('#wcQssid').value.trim()||WC_DEF.qssid,phone:$('#wcPhone').value.trim(),sign:$('#wcSign').value.trim(),size:wcSz,per:String(WC_SZ[wcSz].n),qr:$('#wcQr').checked,sec:$('#wcSec').value,key:$('#wcKey').value,
     langs:[...document.querySelectorAll('#wcPv .wc-lg input:checked')].map(x=>x.value)});
 }
 function wcZoom(){const w=Math.max(1,$('#wcPrev').clientWidth-32),v=$('#wcZoomPick').value;$('#wcPages').style.zoom=v==='auto'?Math.min(1,Math.max(.1,w/793.7)):+v}
 function wcRefresh(now){
   clearTimeout(wcT);
   const run=()=>{
-    const cfg=wcCfgRead();save('wf_card_cfg',{size:cfg.size,ssid:cfg.ssid,phone:cfg.phone,sign:cfg.sign,langs:cfg.langs,qr:cfg.qr,sec:cfg.sec,key:cfg.key});$('#wcKeyL').classList.toggle('hide',cfg.sec!=='WPA');
+    const cfg=wcCfgRead();save('wf_card_cfg',{size:cfg.size,ssid:cfg.ssid,qssid:cfg.qssid,phone:cfg.phone,sign:cfg.sign,langs:cfg.langs,qr:cfg.qr,sec:cfg.sec,key:cfg.key});$('#wcKeyL').classList.toggle('hide',cfg.sec!=='WPA');
     const filled=wcRows.every(r=>r.l.trim()&&r.p.trim());
     const cards=wcRows.map(r=>({l:r.l.trim()||'00000',p:r.p.trim()||'0000'}));
     let msg='',okP=true,okD=true;
@@ -3190,13 +3191,13 @@ function wcClose(){
   const c=wcCfg();wcSz=c.size;
   const szs=()=>{$('#wcSzs').innerHTML=Object.entries(WC_SZ).map(([k,v])=>'<button type="button" data-sz="'+k+'" class="'+(k===wcSz?'on':'')+'" aria-pressed="'+(k===wcSz)+'"><i class="wc-szi" style="--w:'+(k==='a5'?1:.5)+';--h:'+(k==='a5'||k==='a6'?.5:k==='a7'?.25:.2)+'"></i><b>'+v.t+'</b><small>'+v.d+' · '+v.n+' на листе</small></button>').join('')};szs();
   $('#wcSzs').onclick=e=>{const b=e.target.closest('[data-sz]');if(b){wcSz=b.dataset.sz;szs();wcRefresh(true)}};
-  $('#wcQr').checked=c.qr!==false;$('#wcSec').value=c.sec==='WPA'?'WPA':'nopass';$('#wcKey').value=c.key||'';$('#wcSsid').value=c.ssid;$('#wcPhone').value=c.phone;$('#wcSign').value=c.sign;
+  $('#wcQr').checked=c.qr!==false;$('#wcSec').value=c.sec==='WPA'?'WPA':'nopass';$('#wcKey').value=c.key||'';$('#wcSsid').value=c.ssid;$('#wcQssid').value=c.qssid||WC_DEF.qssid;$('#wcPhone').value=c.phone;$('#wcSign').value=c.sign;
   document.querySelectorAll('#wcPv .wc-lg input').forEach(x=>{x.checked=c.langs.includes(x.value)});
   wcRowsRender();
   $('#wcRows').addEventListener('input',e=>{const t=e.target;if(t.dataset.wcr!=null){wcRows[+t.dataset.wcr][t.dataset.k]=t.value;wcRefresh()}});
   $('#wcRows').addEventListener('click',e=>{const b=e.target.closest('[data-wcx]');if(b){wcRows.splice(+b.dataset.wcx,1);if(!wcRows.length)wcRows.push({l:'',p:''});wcRowsRender();wcRefresh(true)}});
   $('#wcPv').addEventListener('change',e=>{if(e.target.closest('.wc-lg')||e.target.closest('.wc-qrl')||e.target.closest('details'))wcRefresh(true)});
-  ['wcSsid','wcPhone','wcSign','wcKey'].forEach(id=>$('#'+id).oninput=()=>wcRefresh());
+  ['wcSsid','wcQssid','wcPhone','wcSign','wcKey'].forEach(id=>$('#'+id).oninput=()=>wcRefresh());
   $('#wcAdd').onclick=()=>{wcRows.push({l:'',p:''});wcRowsRender();wcRefresh(true)};
   $('#wcOpen').onclick=()=>{if(!demand('wifi.cards'))return;$('#wcPv').classList.add('on');wcRefresh(true)};
   $('#wcPvX').onclick=wcClose;
@@ -3295,7 +3296,7 @@ $('#themeBtn').onclick=()=>{const v=TH_NEXT[$('#themePick').value]||'auto';$('#t
 })();
 $('#quickLogout').onclick=()=>$('#logout').click();
 /* ---- Подсказки в шапке: «О сайте» (логотип) и «Учётная запись» (аватар). Наведение на ПК, нажатие на телефоне. ---- */
-const APP_VER='9';
+const APP_VER='10';
 const tbAgo=t=>{if(!t)return '';const s=Math.round((Date.now()-t)/1000);return s<45?'только что':s<3600?Math.round(s/60)+' мин назад':s<86400?Math.round(s/3600)+' ч назад':new Date(t).toLocaleDateString('ru-RU')};
 const tbDev={desktop:'Компьютер',phone:'Телефон',tablet:'Планшет'};
 const tbRow=(k,v)=>'<div><span>'+k+'</span><b>'+v+'</b></div>';
