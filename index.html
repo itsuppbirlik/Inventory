@@ -199,6 +199,7 @@
   .wc-langs{display:flex;flex-wrap:wrap;gap:6px}
   .wc-lg{display:flex!important;gap:6px;align-items:center;margin:0!important;padding:8px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx)!important;font-size:14px!important;cursor:pointer}
   .wc-lg input{width:18px;height:18px}
+  .wc-qrl{display:flex!important;gap:8px;align-items:center;margin:14px 0 0!important;padding:10px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx)!important;font-size:14px!important;font-weight:600;cursor:pointer}.wc-qrl input{width:18px;height:18px}
   .wc-seg{display:flex;gap:6px}.wc-seg button{flex:1;height:44px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font-weight:700;font-size:16px;cursor:pointer}
   .wc-seg button.on{background:var(--ac);border-color:var(--ac);color:#fff}
   .wc-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;padding:8px;border:1px solid var(--bd);border-radius:10px;background:var(--bg)}
@@ -242,6 +243,15 @@
   /* wide short cards (2-3 per sheet): languages side by side */
   .wide .wcbody{display:grid;grid-template-columns:repeat(var(--nl),minmax(0,1fr));column-gap:1.3em;align-content:start}
   .wide .wcl .wct{margin-top:.5em}
+  /* QR tile in the header */
+  .wch.q{grid-template-columns:auto 1fr auto}
+  .wch.q .wcnet{grid-column:1/3}
+  .wcqr{grid-column:3;grid-row:1/span 2;position:relative;z-index:1;align-self:center;box-sizing:border-box;width:max(6.6em,21mm);height:max(6.6em,21mm);margin-left:.9em;padding:.25em;border-radius:.7em;background:#fff;box-shadow:0 .15em .6em rgba(4,30,80,.3)}
+  .wcqr svg{display:block;width:100%;height:100%}
+  /* one language on a wide card: steps in two columns */
+  .wide .wcbody[style*="--nl:1"] .wcl{columns:2;column-gap:1.6em}
+  .wide .wcbody[style*="--nl:1"] .wchd{column-span:all}
+  .wide .wcbody[style*="--nl:1"] .wcs{break-inside:avoid}
   @media screen{.wcpg:last-child{margin-bottom:0}}
   @media print{
     @page{size:A4;margin:0}
@@ -322,7 +332,7 @@
   .wf-ic,.item button,#tab-wifi .item button,.mini button,.cam{border:0;border-radius:10px;background:var(--fill);color:var(--tx);box-shadow:none}
   .wf-ic:hover{background:var(--acs);color:var(--ac)}.wf-ic.warn{background:var(--warnb);color:var(--warn);border:0}
   .chip{border:0;border-radius:999px;background:var(--acs);color:var(--ac);font-weight:600;box-shadow:none}.chip.code{background:transparent;border:1.5px dashed var(--ac)}
-  .wc-lg{border:0;border-radius:12px;background:var(--fill)}
+  .wc-lg,.wc-qrl{border:0;border-radius:12px;background:var(--fill)}
   .wc-seg{background:var(--fill);padding:3px;border-radius:12px;gap:2px}
   .wc-seg button{border:0;border-radius:10px;background:transparent;box-shadow:none;font-size:15px;font-weight:600;color:var(--mut)}
   .wc-seg button.on{background:var(--card);color:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,.15)}
@@ -957,13 +967,13 @@ button.tb-logo:focus-visible,button.tb-ava:focus-visible{outline:2px solid var(-
   <div class="wcct"><h2>Карточка Wi-Fi</h2><button class="wf-ic" id="wcPvX" title="Закрыть">×</button></div>
   <label>Язык инструкции</label>
   <div class="wc-langs"><label class="wc-lg"><input type="checkbox" value="kk"> Қазақша</label><label class="wc-lg"><input type="checkbox" value="ru"> Русский</label><label class="wc-lg"><input type="checkbox" value="en"> English</label></div>
-  <label>Карточек на листе A4</label>
-  <div class="wc-seg" id="wcSeg"><button data-per="1">1</button><button data-per="2">2</button><button data-per="3">3</button><button data-per="4">4</button><button data-per="6">6</button></div>
+  <label class="wc-qrl"><input type="checkbox" id="wcQr"> QR-код для подключения к сети</label>
+  <p class="small" style="margin:6px 0 0">Размер карточки один: половина листа A4 (20 × 14 см), на листе 2 карточки и одна линия разреза.</p>
   <label>Логин и пароль</label>
   <div id="wcRows"></div>
   <button class="btn sec" id="wcAdd">+ Ещё карточка</button>
   <details style="margin-top:12px"><summary class="small" style="cursor:pointer">Сеть, телефон, подпись</summary>
-   <label>Название сети</label><input id="wcSsid"><label>Телефон</label><input id="wcPhone"><label>Подпись</label><input id="wcSign">
+   <label>Название сети</label><input id="wcSsid"><label>Защита сети (для QR-кода)</label><select id="wcSec"><option value="nopass">Открытая — вход через страницу авторизации</option><option value="WPA">WPA/WPA2 — с паролем сети</option></select><label id="wcKeyL" class="hide">Пароль сети<input id="wcKey" autocomplete="off" spellcheck="false"></label><label>Телефон</label><input id="wcPhone"><label>Подпись</label><input id="wcSign">
   </details>
   <p class="small" id="wcMsg" style="color:var(--bad)"></p>
   <p class="small">Логины и пароли не отправляются на сервер и не сохраняются в браузере. При закрытии редактора очищаются. Скачанный Word и PDF содержат введённые данные — храните их безопасно.</p>
@@ -2888,34 +2898,88 @@ const WC_L={
   kk:{tag:'KZ',sub:'Қонақтарға арналған Wi-Fi',login:'Логин',pass:'Құпия сөз',net:'Желі',
     prob:'Мәселелер туындаған жағдайда ұялы телефон нөміріне хабарласыңыз.',
     h:'**Wi-Fi желісіне** қосылу және оған кіру үшін мына қадамдарды орындау қажет',
+    sq:'Қол жетімді Wi-Fi желілерінің **тізімін ашыңыз** немесе телефон камерасымен **QR-кодты сканерлеңіз**.',
     s:['Қол жетімді Wi-Fi желілерінің **тізімін ашыңыз**.','**{S}** деп аталатын желіні таңдап, **Қосылу** түймесін басыңыз.','Жүйе автоматты түрде авторизация бетіне бағыттайды.','Мәтінді оқығаннан кейін жоғарыда көрсетілген **логин** мен **құпия сөзді** енгізіңіз (немесе есептік жазбаға кіру құрылғыда сақталған болса, жазбаны растыңыз).']},
   ru:{tag:'RU',sub:'Гостевой Wi-Fi',login:'Логин',pass:'Пароль',net:'Сеть',
     prob:'В случае возникновения проблем, обращайтесь по моб номеру телефону.',
     h:'Для подключения и получения доступа к **беспроводной сети Wi-Fi** вам необходимо выполнить следующие шаги:',
+    sq:'**Откройте список** доступных сетей Wi-Fi или **отсканируйте QR-код** камерой телефона.',
     s:['**Откройте список** доступных сетей Wi-Fi.','Выберите сеть под названием **{S}** и нажмите **Подключиться**.','После этого система автоматически переадресует вас на страницу авторизации (если переадресация не произошла, попробуйте открыть любую ссылку в браузере).','Ознакомившись с текстом, введите **логин** и **пароль**, указанные выше (или подтвердите вход, если на устройстве уже сохранён доступ к аккаунту).']},
   en:{tag:'EN',sub:'',login:'Login',pass:'Password',net:'Network',
     prob:'In case of problems, please contact the mobile phone number.',
     h:'To connect and access a **Wi-Fi network**, you need to follow these steps:',
+    sq:'**Open the list** of available Wi-Fi networks or **scan the QR code** with your phone camera.',
     s:['**Open the list** of available Wi-Fi networks.','Select the network called **{S}** and click **Connect**.','The system will then automatically redirect you to the authorization page (if the redirect does not happen, try opening any link).','Enter the **login** and **password** shown above (or confirm the entry if access to the account is already saved on the device).']}
 };
-const WC_DEF={ssid:'BIRLIK_GUEST',phone:'+7 701 071 63 38',sign:'Malik/Sarsen, IT Specialist',langs:['kk','ru','en'],per:'1'};
-const WC_B={1:[25,30,30],2:[15,18,23],3:[0,12,15],4:[11,14,17],6:[0,0,13]};   // [3 languages, 2 languages, 1 language]; 0 = does not fit legibly
-const WC_FS={1:15,2:11,3:9,4:8.4,6:7.2};   // starting font size (pt); the preview shrinks it until every page fits
-const wcCfg=()=>Object.assign({},WC_DEF,load('wf_card_cfg',{}));
+const WC_DEF={ssid:'BIRLIK_GUEST',phone:'+7 701 071 63 38',sign:'Malik/Sarsen, IT Specialist',langs:['kk','ru','en'],per:'2',qr:true,sec:'nopass',key:''};
+const WC_B={n:[15,18,21],q:[14,17,20]};   // [3 languages, 2 languages, 1 language]; 0 = does not fit legibly
+const WC_FS={1:13,2:12,3:11};   // starting font size (pt) by number of languages; the preview shrinks it until the card fits
+const wcCfg=()=>Object.assign({},WC_DEF,load('wf_card_cfg',{}),{per:'2'});   // one card size: half of A4 (2 per sheet)
 const wcRich=(t,cfg)=>t.replace(/\{S\}/g,cfg.ssid).split(/(\*\*.+?\*\*)/).filter(Boolean).map(p=>p.startsWith('**')?{t:p.slice(2,-2),b:1}:{t:p});
 // One card = one model; the HTML preview/print and the Word file are both built from it.
 function wcModel(cfg,c){
   const langs=['kk','ru','en'].filter(k=>cfg.langs.includes(k)),j=f=>[...new Set(langs.map(k=>WC_L[k][f]))].join(' / ');
-  return {multi:langs.length>1,sub:langs.filter(k=>WC_L[k].sub).map(k=>WC_L[k].sub).join(' · '),net:{label:j('net'),name:cfg.ssid},
+  const qr=cfg.qr&&!(cfg.sec==='WPA'&&!cfg.key)?wcQrText(cfg):'';
+  return {qr,multi:langs.length>1,sub:langs.filter(k=>WC_L[k].sub).map(k=>WC_L[k].sub).join(' · '),net:{label:j('net'),name:cfg.ssid},
     creds:[{label:j('login'),value:c.l},{label:j('pass'),value:c.p}],
-    langs:langs.map(k=>({tag:WC_L[k].tag,head:wcRich(WC_L[k].h,cfg),steps:WC_L[k].s.map(s=>wcRich(s,cfg))})),
+    langs:langs.map(k=>({tag:WC_L[k].tag,head:wcRich(WC_L[k].h,cfg),steps:WC_L[k].s.map((s,i)=>wcRich(i===0&&qr?WC_L[k].sq:s,cfg))})),
     foot:{lines:['ru','en','kk'].filter(k=>langs.includes(k)).map(k=>WC_L[k].prob),phone:cfg.phone,sign:cfg.sign}};
 }
+// QR encoder (byte mode, error correction M, versions 1-10), following Nayuki's reference algorithm. Enough for a Wi-Fi string.
+function qrMatrix(text){
+  const data=[...new TextEncoder().encode(text)],ECC=[0,10,16,26,18,24,16,18,22,22,26],NB=[0,1,1,1,2,2,4,4,4,5,5];
+  const raw=v=>{let r=(16*v+128)*v+64;if(v>=2){const n=Math.floor(v/7)+2;r-=(25*n-10)*n-55;if(v>=7)r-=36}return r};
+  const capOf=v=>Math.floor(raw(v)/8)-ECC[v]*NB[v];
+  let ver=1;while(ver<=10&&4+(ver<10?8:16)+data.length*8>capOf(ver)*8)ver++;
+  if(ver>10)throw new Error('Слишком длинные данные для QR-кода');
+  const cap=capOf(ver),bits=[],put=(v,n)=>{for(let i=n-1;i>=0;i--)bits.push(v>>>i&1)};
+  put(4,4);put(data.length,ver<10?8:16);data.forEach(b=>put(b,8));
+  put(0,Math.min(4,cap*8-bits.length));put(0,(8-bits.length%8)%8);
+  for(let p=0xEC;bits.length<cap*8;p^=0xEC^0x11)put(p,8);
+  const cw=[];for(let i=0;i<bits.length;i+=8)cw.push(bits.slice(i,i+8).reduce((a,b)=>a<<1|b,0));
+  const mul=(x,y)=>{let z=0;for(let i=7;i>=0;i--){z=(z<<1)^((z>>>7)*0x11D);z^=((y>>>i)&1)*x}return z};
+  const deg=ECC[ver],div=Array(deg).fill(0);div[deg-1]=1;
+  for(let i=0,root=1;i<deg;i++){for(let j=0;j<deg;j++){div[j]=mul(div[j],root);if(j+1<deg)div[j]^=div[j+1]}root=mul(root,2)}
+  const rem=d=>{const r=Array(deg).fill(0);d.forEach(b=>{const f=b^r.shift();r.push(0);div.forEach((c,i)=>{r[i]^=mul(c,f)})});return r};
+  const nb=NB[ver],rc=Math.floor(raw(ver)/8),ns=nb-rc%nb,sl=Math.floor(rc/nb),blocks=[];
+  for(let i=0,k=0;i<nb;i++){const d=cw.slice(k,k+sl-deg+(i<ns?0:1));k+=d.length;const e=rem(d);if(i<ns)d.push(0);blocks.push(d.concat(e))}
+  const all=[];for(let i=0;i<blocks[0].length;i++)blocks.forEach((b,j)=>{if(i!==sl-deg||j>=ns)all.push(b[i])});
+  const N=ver*4+17,M=[...Array(N)].map(()=>Array(N).fill(false)),F=[...Array(N)].map(()=>Array(N).fill(false));
+  const set=(x,y,d)=>{M[y][x]=d;F[y][x]=true};
+  for(let i=0;i<N;i++){set(6,i,i%2===0);set(i,6,i%2===0)}
+  [[3,3],[N-4,3],[3,N-4]].forEach(([x,y])=>{for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++){const d=Math.max(Math.abs(dx),Math.abs(dy)),xx=x+dx,yy=y+dy;if(xx>=0&&xx<N&&yy>=0&&yy<N)set(xx,yy,d!==2&&d!==4)}});
+  if(ver>1){const n=Math.floor(ver/7)+2,st=Math.ceil((ver*4+4)/(n*2-2))*2,pos=[6];for(let p=N-7;pos.length<n;p-=st)pos.splice(1,0,p);
+    pos.forEach((a,i)=>pos.forEach((b,j)=>{if(i===0&&j===0||i===0&&j===n-1||i===n-1&&j===0)return;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)set(a+dx,b+dy,Math.max(Math.abs(dx),Math.abs(dy))!==1)}))}
+  const fmt=mask=>{let r=mask;for(let i=0;i<10;i++)r=(r<<1)^((r>>>9)*0x537);const b=(mask<<10|r)^0x5412,g=i=>(b>>>i&1)===1;
+    for(let i=0;i<=5;i++)set(8,i,g(i));set(8,7,g(6));set(8,8,g(7));set(7,8,g(8));for(let i=9;i<15;i++)set(14-i,8,g(i));
+    for(let i=0;i<8;i++)set(N-1-i,8,g(i));for(let i=8;i<15;i++)set(8,N-15+i,g(i));set(8,N-8,true)};
+  fmt(0);
+  if(ver>=7){let r=ver;for(let i=0;i<12;i++)r=(r<<1)^((r>>>11)*0x1F25);const b=ver<<12|r;for(let i=0;i<18;i++){const t=(b>>>i&1)===1,a=N-11+i%3,c=Math.floor(i/3);set(a,c,t);set(c,a,t)}}
+  for(let right=N-1,i=0;right>=1;right-=2){if(right===6)right=5;for(let v=0;v<N;v++)for(let j=0;j<2;j++){const x=right-j,y=((right+1)&2)===0?N-1-v:v;if(!F[y][x]&&i<all.length*8){M[y][x]=(all[i>>>3]>>>(7-(i&7))&1)===1;i++}}}
+  const MK=[(x,y)=>(x+y)%2===0,(x,y)=>y%2===0,(x,y)=>x%3===0,(x,y)=>(x+y)%3===0,(x,y)=>(Math.floor(x/3)+Math.floor(y/2))%2===0,(x,y)=>x*y%2+x*y%3===0,(x,y)=>(x*y%2+x*y%3)%2===0,(x,y)=>((x+y)%2+x*y%3)%2===0];
+  const apply=m=>{for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(!F[y][x]&&MK[m](x,y))M[y][x]=!M[y][x]};
+  const pen=()=>{let p=0;const lines=[];for(let k=0;k<N;k++)lines.push(M[k],M.map(r=>r[k]));
+    lines.forEach(l=>{for(let k=1,run=1;k<=N;k++){if(k<N&&l[k]===l[k-1])run++;else{if(run>=5)p+=run-2;run=1}}
+      const s='0000'+l.map(b=>b?1:0).join('')+'0000';for(let k=0;k+11<=s.length;k++){const t=s.substr(k,11);if(t==='10111010000'||t==='00001011101')p+=40}});
+    for(let y=0;y<N-1;y++)for(let x=0;x<N-1;x++){const c=M[y][x];if(c===M[y][x+1]&&c===M[y+1][x]&&c===M[y+1][x+1])p+=3}
+    const dark=M.flat().filter(Boolean).length,t=N*N;return p+10*Math.max(0,Math.ceil(Math.abs(dark*20-t*10)/t)-1)};
+  let best=0,bp=Infinity;for(let m=0;m<8;m++){apply(m);fmt(m);const p=pen();if(p<bp){bp=p;best=m}apply(m)}
+  apply(best);fmt(best);return M;
+}
+const wcQrEsc=s=>String(s).replace(/([\\;,:"])/g,'\\$1');
+const wcQrText=cfg=>'WIFI:T:'+(cfg.sec==='WPA'?'WPA':'nopass')+';S:'+wcQrEsc(cfg.ssid)+';'+(cfg.sec==='WPA'?'P:'+wcQrEsc(cfg.key||'')+';':'')+';';
+function wcQrSvg(t){const M=qrMatrix(t),N=M.length,q=2;let d='';M.forEach((r,y)=>r.forEach((v,x)=>{if(v)d+='M'+(x+q)+' '+(y+q)+'h1v1h-1z'}));
+  return '<svg viewBox="0 0 '+(N+2*q)+' '+(N+2*q)+'" shape-rendering="crispEdges" aria-label="QR"><path fill="#0b2545" d="'+d+'"/></svg>'}
+function wcQrPng(t){const M=qrMatrix(t),N=M.length,q=2,s=12,c=document.createElement('canvas');c.width=c.height=(N+2*q)*s;const g=c.getContext('2d');
+  g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.fillStyle='#0b2545';M.forEach((r,y)=>r.forEach((v,x)=>{if(v)g.fillRect((x+q)*s,(y+q)*s,s,s)}));
+  return c.toDataURL('image/png').split(',')[1]}
 const wcH=segs=>segs.map(s=>s.b?'<b>'+esc(s.t)+'</b>':esc(s.t)).join('');
 const WC_PH='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>';
+let wcQrMemo=['',''];
+const wcQrSvgC=t=>{if(wcQrMemo[0]!==t)wcQrMemo=[t,wcQrSvg(t)];return wcQrMemo[1]};
 function wcCardHtml(m){
-  return '<div class="wcard"><div class="wch"><img src="'+WC_LOGO+'" alt=""><div class="wch-t"><h1>Guest Wi-Fi</h1>'+(m.sub?'<div class="sub">'+esc(m.sub)+'</div>':'')+'</div>'
-    +'<div class="wcnet">'+esc(m.net.label)+': <b>'+esc(m.net.name)+'</b></div></div>'
+  return '<div class="wcard"><div class="wch'+(m.qr?' q':'')+'"><img src="'+WC_LOGO+'" alt=""><div class="wch-t"><h1>Guest Wi-Fi</h1>'+(m.sub?'<div class="sub">'+esc(m.sub)+'</div>':'')+'</div>'
+    +'<div class="wcnet">'+esc(m.net.label)+': <b>'+esc(m.net.name)+'</b></div>'+(m.qr?'<div class="wcqr">'+wcQrSvgC(m.qr)+'</div>':'')+'</div>'
     +'<div class="wcg">'+m.creds.map(x=>'<div class="wcb"><small>'+esc(x.label)+'</small><b>'+esc(x.value)+'</b></div>').join('')+'</div>'
     +'<div class="wcbody" style="--nl:'+m.langs.length+'">'+m.langs.map(l=>'<div class="wcl">'+(m.multi?'<div class="wct"><span>'+l.tag+'</span></div>':'')+'<p class="wchd">'+wcH(l.head)+'</p>'
       +l.steps.map((s,i)=>'<p class="wcs"><i>'+(i+1)+'</i>'+wcH(s)+'</p>').join('')+'</div>').join('')+'</div>'
@@ -2933,7 +2997,7 @@ function wcPagesHtml(cfg,cards,fs){
 }
 // Word: the same grid. Font sizes (half-points) per layout come from test renders in LibreOffice, so a full sheet stays on one page.
 async function wcDocx(cfg,cards,opt){
-  const per=+cfg.per,cols=per>=4?2:1,nrow=Math.ceil(per/cols),nl=Math.min(3,Math.max(1,cfg.langs.length)),b=(opt&&opt.b)||WC_B[per][3-nl];
+  const per=+cfg.per,cols=per>=4?2:1,nrow=Math.ceil(per/cols),nl=Math.min(3,Math.max(1,cfg.langs.length)),b=(opt&&opt.b)||WC_B[cfg.qr?'q':'n'][3-nl],qrT=cfg.qr?wcQrText(cfg):'';
   if(!b)throw new Error('Столько текста не помещается на карточку. Выберите меньше языков или меньше карточек на листе.');
   const sz=k=>Math.max(8,Math.round(b*k)),ACC='1B6FC2',NAVY='0B3D91',HEAD='1B5FB5',INK='12263A',MUT='4B6075';
   let did=0;
@@ -2943,8 +3007,9 @@ async function wcDocx(cfg,cards,opt){
   const segs=(a,o)=>a.map(s=>r(s.t,Object.assign({b:s.b},o))).join('');
   const tiny='<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr></w:p>';
   const logoPt=Math.max(26,b*1.7),logoEmu=Math.round(logoPt*12700),logoTw=Math.round(logoPt*20);
-  const logo=()=>{did++;return '<w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+logoEmu+'" cy="'+logoEmu+'"/><wp:docPr id="'+did+'" name="Wi-Fi '+did+'"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="logo.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+logoEmu+'" cy="'+logoEmu+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>'};
+  const img=(rid,emu,jc)=>{did++;return '<w:p><w:pPr><w:spacing w:before="0" w:after="0"/>'+(jc?'<w:jc w:val="center"/>':'')+'</w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+emu+'" cy="'+emu+'"/><wp:docPr id="'+did+'" name="Image '+did+'"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="'+rid+'.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+rid+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+emu+'" cy="'+emu+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>'},logo=()=>img('rId1',logoEmu);
   const W=11106,H=16038,SAFE=284,cw=Math.floor(W/cols),rh=Math.floor(H/nrow)-60,inner=cw-2*SAFE;
+  const qrPt=Math.max(60,b/2*6.6),qrEmu=Math.round(qrPt*12700),QP=60,QW=Math.round(qrPt*20)+2*QP;
   const PAD=Math.round(inner*0.04),GAP=Math.round(inner*0.025),HW=Math.floor((inner-2*PAD-GAP)/2),CW=2*PAD+2*HW+GAP;
   const B=(o)=>'<w:tcBorders>'+['top','left','bottom','right'].map(x=>o&&o[x]?'<w:'+x+' w:val="'+(o[x][2]||'single')+'" w:sz="'+o[x][0]+'" w:space="0" w:color="'+o[x][1]+'"/>':'<w:'+x+' w:val="nil"/>').join('')+'</w:tcBorders>';
   const tc=(w,span,o,inner)=>'<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/>'+(span>1?'<w:gridSpan w:val="'+span+'"/>':'')+B(o.bd)+(o.fill?'<w:shd w:val="clear" w:color="auto" w:fill="'+o.fill+'"/>':'')+'<w:tcMar><w:top w:w="'+(o.t||0)+'" w:type="dxa"/><w:left w:w="'+(o.l||0)+'" w:type="dxa"/><w:bottom w:w="'+(o.bm||0)+'" w:type="dxa"/><w:right w:w="'+(o.rr!=null?o.rr:o.l||0)+'" w:type="dxa"/></w:tcMar>'+(o.va?'<w:vAlign w:val="'+o.va+'"/>':'')+'</w:tcPr>'+inner+'</w:tc>';
@@ -2953,24 +3018,36 @@ async function wcDocx(cfg,cards,opt){
   const card=c=>{
     const m=wcModel(cfg,c),LW=logoTw+Math.round(b*6),TW=CW-2*PAD-LW;
     const title=p(r('Guest Wi-Fi',{sz:Math.max(28,sz(1.8)),b:1,col:'FFFFFF'}),{ln:240})+(m.sub?p(r(m.sub,{sz:sz(.85),col:'FFFFFF'})):'');
-    const headTbl=tbl(CW-2*PAD,[LW,TW],row(tc(LW,1,{va:'center'},logo())+tc(TW,1,{va:'center'},title)))
-      +p(r(' '+m.net.label+': ',{sz:sz(.9),col:'FFFFFF',fill:NAVY})+r(m.net.name+' ',{sz:sz(.9),col:'FFFFFF',fill:NAVY,b:1}),{bf:Math.round(b*6)});
+    const pill=p(r(' '+m.net.label+': ',{sz:sz(.9),col:'FFFFFF',fill:NAVY})+r(m.net.name+' ',{sz:sz(.9),col:'FFFFFF',fill:NAVY,b:1}),{bf:Math.round(b*6)});
+    let headTbl;
+    if(m.qr){const QG=Math.round(b*8),LWID=CW-2*PAD-QW-QG;
+      headTbl=tbl(CW-2*PAD,[LWID+QG,QW],row(tc(LWID+QG,1,{va:'center',rr:QG},tbl(LWID,[LW,LWID-LW],row(tc(LW,1,{va:'center'},logo())+tc(LWID-LW,1,{va:'center'},title)))+pill)
+        +tc(QW,1,{fill:'FFFFFF',t:QP,bm:QP,l:QP,va:'center'},img('rId3',qrEmu,1))))+tiny}
+    else headTbl=tbl(CW-2*PAD,[LW,TW],row(tc(LW,1,{va:'center'},logo())+tc(TW,1,{va:'center'},title)))+pill;
     const cred=x=>p(r(x.label,{sz:sz(.72),b:1,caps:1,sp:Math.round(b*.5),col:MUT}))+p(r(x.value,{sz:Math.max(30,sz(1.9)),mono:1,col:NAVY}),{ln:240});
     const cb={left:[30,ACC]};
-    const wide=cols===1&&per>=2&&m.langs.length>1,lang=(l,i)=>(m.multi?p(r(' '+l.tag+' ',{sz:sz(.8),b:1,col:'FFFFFF',fill:NAVY}),{bf:i&&!wide?Math.round(b*7):0,af:Math.round(b*2.5)}):'')
+    const wide=cols===1&&per>=2,step=(s,k)=>p(r(String(k+1),{b:1,col:ACC})+r('\t')+segs(s,{}),{hang:Math.round(b*13),af:Math.round(b*1.8)}),lang=(l,i)=>(m.multi?p(r(' '+l.tag+' ',{sz:sz(.8),b:1,col:'FFFFFF',fill:NAVY}),{bf:i&&!wide?Math.round(b*7):0,af:Math.round(b*2.5)}):'')
       +p(segs(l.head,{}),{af:Math.round(b*2.5)})+l.steps.map((s,k)=>p(r(String(k+1),{b:1,col:ACC})+r('\t')+segs(s,{}),{hang:Math.round(b*13),af:Math.round(b*1.8)})).join('');
     let body;
-    if(wide){const n=m.langs.length,G=Math.round(b*14),cwl=Math.floor((CW-2*PAD-(n-1)*G)/n);
+    if(wide&&m.langs.length===1){const l=m.langs[0],G=Math.round(b*16),h=Math.ceil(l.steps.length/2),cwl=Math.floor((CW-2*PAD-G)/2);
+      body=p(segs(l.head,{}),{af:Math.round(b*3)})+tbl(CW-2*PAD,[cwl+G,CW-2*PAD-cwl-G],row(tc(cwl+G,1,{rr:G},l.steps.slice(0,h).map((s,k)=>step(s,k)).join(''))+tc(CW-2*PAD-cwl-G,1,{},l.steps.slice(h).map((s,k)=>step(s,k+h)).join(''))))+'<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr></w:p>'}
+    else if(wide){const n=m.langs.length,G=Math.round(b*14),cwl=Math.floor((CW-2*PAD-(n-1)*G)/n);
       body=tbl(CW-2*PAD,Array.from({length:n},(_,i)=>cwl+(i<n-1?G:0)),row(m.langs.map((l,i)=>tc(cwl+(i<n-1?G:0),1,{rr:i<n-1?G:0,l:0},lang(l,i))).join('')))+'<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr></w:p>'}
     else body=m.langs.map(lang).join('');
     const foot=m.foot.lines.map(x=>p(r(x,{sz:sz(.82),col:MUT}),{jc:'center'})).join('')+(m.foot.phone?p(r(m.foot.phone,{sz:Math.max(20,sz(1.6)),b:1,col:NAVY}),{jc:'center',bf:Math.round(b*2.5)}):'')+(m.foot.sign?p(r(m.foot.sign,{sz:sz(.9),b:1}),{jc:'center'}):'');
-    const sp=h=>row(tc(CW,5,{},'<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr></w:p>'),[h,'exact']);
     const ring={top:[6,'D5E1EE'],left:[6,'D5E1EE'],bottom:[6,'D5E1EE'],right:[6,'D5E1EE']};
+    const sp=h=>row(tc(CW,5,{bd:{left:ring.left,right:ring.right}},'<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr></w:p>'),[h,'exact']);
+    // card height is fixed: estimate the natural height of header, logins and footer, give the rest to the instructions
+    const Lh=(z,ln)=>z/2*20*1.22*(ln||250)/240,K=1.06;
+    const titleH=Lh(Math.max(28,sz(1.8)),240)+(m.sub?Lh(sz(.85)):0),leftH=Math.max(logoTw,titleH)+b*6+Lh(sz(.9));
+    const estH=b*18+Math.max(leftH,m.qr?QW:0)+(m.qr?20:0),estC=b*9+Lh(sz(.72))+Lh(Math.max(30,sz(1.9)),240);
+    const estF=b*13+m.foot.lines.length*Lh(sz(.82))+(m.foot.phone?b*2.5+Lh(Math.max(20,sz(1.6))):0)+(m.foot.sign?Lh(sz(.9)):0);
+    const est=K*(estH+estC+estF)+b*9+2*Math.round(b*6),CH=rh-2*SAFE-80,sp6=sp(Math.round(b*6));
     return tbl(CW,[PAD,HW,GAP,HW,PAD],
       row(tc(CW,5,{fill:HEAD,t:Math.round(b*9),bm:Math.round(b*9),l:PAD,bd:{top:ring.top,left:ring.left,right:ring.right}},headTbl))
       +sp(Math.round(b*9))
       +row(tc(PAD,1,{bd:{left:ring.left}},'<w:p/>')+tc(HW,1,{bd:cb,fill:'EEF4FC',t:Math.round(b*4),bm:Math.round(b*5),l:Math.round(b*7),rr:60},cred(m.creds[0]))+tc(GAP,1,{},'<w:p/>')+tc(HW,1,{bd:cb,fill:'EEF4FC',t:Math.round(b*4),bm:Math.round(b*5),l:Math.round(b*7),rr:60},cred(m.creds[1]))+tc(PAD,1,{bd:{right:ring.right}},'<w:p/>'))
-      +row(tc(CW,5,{t:Math.round(b*6),l:PAD,bm:Math.round(b*6),bd:{left:ring.left,right:ring.right}},body))
+      +sp6+row(tc(CW,5,{l:PAD,bd:{left:ring.left,right:ring.right}},body),[Math.max(200,Math.round(CH-est)),'atLeast'])+sp6
       +row(tc(CW,5,{fill:'F4F7FB',t:Math.round(b*6),bm:Math.round(b*7),l:PAD,bd:{top:[6,'E1E9F3'],left:ring.left,right:ring.right,bottom:ring.bottom}},foot)))+tiny;
   };
   const cut=['8D99A6'],dash={top:[8,cut[0],'dashed'],left:[8,cut[0],'dashed'],bottom:[8,cut[0],'dashed'],right:[8,cut[0],'dashed']};
@@ -2991,43 +3068,47 @@ async function wcDocx(cfg,cards,opt){
   const X='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',R='http://schemas.openxmlformats.org/',zip=new JSZip();
   zip.file('[Content_Types].xml',X+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>');
   zip.file('_rels/.rels',X+'<Relationships xmlns="'+R+'package/2006/relationships"><Relationship Id="rId1" Type="'+R+'officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
-  zip.file('word/_rels/document.xml.rels',X+'<Relationships xmlns="'+R+'package/2006/relationships"><Relationship Id="rId1" Type="'+R+'officeDocument/2006/relationships/image" Target="media/logo.png"/><Relationship Id="rId2" Type="'+R+'officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
+  zip.file('word/_rels/document.xml.rels',X+'<Relationships xmlns="'+R+'package/2006/relationships"><Relationship Id="rId1" Type="'+R+'officeDocument/2006/relationships/image" Target="media/logo.png"/><Relationship Id="rId2" Type="'+R+'officeDocument/2006/relationships/styles" Target="styles.xml"/>'+(qrT?'<Relationship Id="rId3" Type="'+R+'officeDocument/2006/relationships/image" Target="media/qr.png"/>':'')+'</Relationships>');
   zip.file('word/styles.xml',X+'<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr>'+F('Calibri')+'<w:sz w:val="22"/><w:lang w:val="ru-RU" w:eastAsia="ru-RU" w:bidi="ar-SA"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>');
   zip.file('word/document.xml',X+'<w:document '+NS+'><w:body>'+body+'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="400" w:right="400" w:bottom="400" w:left="400" w:header="0" w:footer="0" w:gutter="0"/></w:sectPr></w:body></w:document>');
-  zip.file('word/media/logo.png',WC_LOGO.split(',')[1],{base64:true});
+  zip.file('word/media/logo.png',WC_LOGO.split(',')[1],{base64:true});if(qrT)zip.file('word/media/qr.png',wcQrPng(qrT),{base64:true});
   return zip.generateAsync({type:'uint8array',compression:'DEFLATE'});
 }
 
 // ---- designer (opens from the right panel): language, cards per sheet, logins -> live A4 preview ----
 const WC_MINPT=5.5;
-let wcRows=[{l:'',p:''}],wcPer='1',wcT=0;
+let wcRows=[{l:'',p:''}],wcPer='2',wcT=0;
 function wcFit(cfg,cards){
-  const meas=$('#wcMeas');let fs=WC_FS[cfg.per],ok=true;meas.innerHTML=wcPagesHtml(cfg,cards,fs);
+  const meas=$('#wcMeas');let fs=WC_FS[Math.min(3,cfg.langs.length)]||11,ok=true;meas.innerHTML=wcPagesHtml(cfg,cards,fs);
   for(let i=0;i<40;i++){
     const bad=[...meas.querySelectorAll('.wcard')].some(c=>c.scrollHeight>c.clientHeight+1);if(!bad)break;
     fs*=.95;if(fs<WC_MINPT){ok=false;break}
     meas.querySelectorAll('.wcpg').forEach(p=>{p.style.fontSize=fs+'pt'});
   }
+  if(ok&&fs<(WC_FS[Math.min(3,cfg.langs.length)]||11)){   // the 5% steps can undershoot: refine between the last good and the first bad size
+    const over=()=>[...meas.querySelectorAll('.wcard')].some(c=>c.scrollHeight>c.clientHeight+1);let lo=fs,hi=fs/.95;
+    for(let k=0;k<4;k++){const mid=(lo+hi)/2;meas.querySelectorAll('.wcpg').forEach(p=>{p.style.fontSize=mid+'pt'});if(over())hi=mid;else lo=mid}fs=lo}
   const html=wcPagesHtml(cfg,cards,Math.max(fs,WC_MINPT));meas.innerHTML='';return {html,ok};
 }
 function wcCfgRead(){
-  return Object.assign(wcCfg(),{ssid:$('#wcSsid').value.trim()||WC_DEF.ssid,phone:$('#wcPhone').value.trim(),sign:$('#wcSign').value.trim(),per:wcPer,
+  return Object.assign(wcCfg(),{ssid:$('#wcSsid').value.trim()||WC_DEF.ssid,phone:$('#wcPhone').value.trim(),sign:$('#wcSign').value.trim(),per:'2',qr:$('#wcQr').checked,sec:$('#wcSec').value,key:$('#wcKey').value,
     langs:[...document.querySelectorAll('#wcPv .wc-lg input:checked')].map(x=>x.value)});
 }
 function wcZoom(){const w=Math.max(1,$('#wcPrev').clientWidth-32),v=$('#wcZoomPick').value;$('#wcPages').style.zoom=v==='auto'?Math.min(1,Math.max(.1,w/793.7)):+v}
 function wcRefresh(now){
   clearTimeout(wcT);
   const run=()=>{
-    const cfg=wcCfgRead();save('wf_card_cfg',{ssid:cfg.ssid,phone:cfg.phone,sign:cfg.sign,per:cfg.per,langs:cfg.langs});
+    const cfg=wcCfgRead();save('wf_card_cfg',{ssid:cfg.ssid,phone:cfg.phone,sign:cfg.sign,langs:cfg.langs,qr:cfg.qr,sec:cfg.sec,key:cfg.key});$('#wcKeyL').classList.toggle('hide',cfg.sec!=='WPA');
     const filled=wcRows.every(r=>r.l.trim()&&r.p.trim());
     const cards=wcRows.map(r=>({l:r.l.trim()||'00000',p:r.p.trim()||'0000'}));
     let msg='',okP=true,okD=true;
     if(!cfg.langs.length){$('#wcPages').innerHTML='';$('#wcMsg').textContent='Выберите хотя бы один язык инструкции.';$('#wcPvP').disabled=$('#wcDoc').disabled=true;return}
     const fit=wcFit(cfg,cards);$('#wcPages').innerHTML=fit.html;
     if(!fit.ok){okP=false;msg='Текст не помещается на карточку. Выберите меньше языков или меньше карточек на листе.'}
-    if(!WC_B[cfg.per][3-Math.min(3,cfg.langs.length)]){okD=false;msg=msg||'Для Word такая комбинация не помещается. Выберите меньше языков или карточек.'}
+    if(cfg.qr&&cfg.sec==='WPA'&&!cfg.key){okP=okD=false;msg='Введите пароль сети для QR-кода или выберите открытую сеть.'}
+    if(!WC_B[cfg.qr?'q':'n'][3-Math.min(3,cfg.langs.length)]){okD=false;msg=msg||'Для Word такая комбинация не помещается. Выберите меньше языков или карточек.'}
     if(!filled){okP=okD=false;msg='Введите логин и пароль в каждой карточке. Сейчас в предпросмотре примерные значения.'}
-    $('#wcPreviewInfo').textContent=' · '+Math.ceil(cards.length/(+cfg.per))+' л. · '+cards.length+' карточек';
+    $('#wcPreviewInfo').textContent=' · '+Math.ceil(cards.length/2)+' л. · '+cards.length+' карт.';
     $('#wcMsg').textContent=msg;$('#wcPvP').disabled=!okP;$('#wcDoc').disabled=!okD;wcZoom();
   };
   now?run():wcT=setTimeout(run,160);
@@ -3039,14 +3120,13 @@ function wcClose(){
   clearTimeout(wcT);wcRows=[{l:'',p:''}];$('#wcPages').innerHTML='';$('#wcMeas').innerHTML='';wcRowsRender();$('#wcPv').classList.remove('on');
 }
 (function(){
-  const c=wcCfg();wcPer=String(c.per);$('#wcSsid').value=c.ssid;$('#wcPhone').value=c.phone;$('#wcSign').value=c.sign;
+  const c=wcCfg();$('#wcQr').checked=c.qr!==false;$('#wcSec').value=c.sec==='WPA'?'WPA':'nopass';$('#wcKey').value=c.key||'';$('#wcSsid').value=c.ssid;$('#wcPhone').value=c.phone;$('#wcSign').value=c.sign;
   document.querySelectorAll('#wcPv .wc-lg input').forEach(x=>{x.checked=c.langs.includes(x.value)});
-  const seg=()=>document.querySelectorAll('#wcSeg button').forEach(b=>b.classList.toggle('on',b.dataset.per===wcPer));seg();wcRowsRender();
-  $('#wcSeg').onclick=e=>{const b=e.target.closest('[data-per]');if(b){wcPer=b.dataset.per;seg();wcRefresh(true)}};
+  wcRowsRender();
   $('#wcRows').addEventListener('input',e=>{const t=e.target;if(t.dataset.wcr!=null){wcRows[+t.dataset.wcr][t.dataset.k]=t.value;wcRefresh()}});
   $('#wcRows').addEventListener('click',e=>{const b=e.target.closest('[data-wcx]');if(b){wcRows.splice(+b.dataset.wcx,1);if(!wcRows.length)wcRows.push({l:'',p:''});wcRowsRender();wcRefresh(true)}});
-  $('#wcPv').addEventListener('change',e=>{if(e.target.closest('.wc-lg')||e.target.closest('details'))wcRefresh(true)});
-  ['wcSsid','wcPhone','wcSign'].forEach(id=>$('#'+id).oninput=()=>wcRefresh());
+  $('#wcPv').addEventListener('change',e=>{if(e.target.closest('.wc-lg')||e.target.closest('.wc-qrl')||e.target.closest('details'))wcRefresh(true)});
+  ['wcSsid','wcPhone','wcSign','wcKey'].forEach(id=>$('#'+id).oninput=()=>wcRefresh());
   $('#wcAdd').onclick=()=>{wcRows.push({l:'',p:''});wcRowsRender();wcRefresh(true)};
   $('#wcOpen').onclick=()=>{if(!demand('wifi.cards'))return;$('#wcPv').classList.add('on');wcRefresh(true)};
   $('#wcPvX').onclick=wcClose;
@@ -3145,7 +3225,7 @@ $('#themeBtn').onclick=()=>{const v=TH_NEXT[$('#themePick').value]||'auto';$('#t
 })();
 $('#quickLogout').onclick=()=>$('#logout').click();
 /* ---- Подсказки в шапке: «О сайте» (логотип) и «Учётная запись» (аватар). Наведение на ПК, нажатие на телефоне. ---- */
-const APP_VER='7';
+const APP_VER='8';
 const tbAgo=t=>{if(!t)return '';const s=Math.round((Date.now()-t)/1000);return s<45?'только что':s<3600?Math.round(s/60)+' мин назад':s<86400?Math.round(s/3600)+' ч назад':new Date(t).toLocaleDateString('ru-RU')};
 const tbDev={desktop:'Компьютер',phone:'Телефон',tablet:'Планшет'};
 const tbRow=(k,v)=>'<div><span>'+k+'</span><b>'+v+'</b></div>';
