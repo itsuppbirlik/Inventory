@@ -3,11 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Списание устройств</title>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<title>IT · Инвентарь и Wi-Fi</title>
+<script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <style>
@@ -354,9 +351,34 @@
     .c-cls,.wf-head>span:nth-child(4){display:none}
   }
 </style>
+<style>
+.wf-pagination{display:flex;justify-content:flex-end;align-items:center;gap:12px;padding:12px;flex-wrap:wrap}.wf-pagination span{margin-right:auto;font-size:14px;color:var(--mut)}#wfQ{scroll-margin-top:100px}.upload-zone{display:flex;flex-direction:column;gap:4px;padding:16px;border:1px dashed var(--ac);border-radius:12px;background:var(--acs);cursor:pointer;color:var(--ac);min-height:76px}.upload-zone:focus-within{outline:3px solid var(--ac)}.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%);white-space:nowrap;border:0!important}
+/* v4 — lightweight surfaces. No animated blur, no continuous effects. */
+:root{--ac:#1766c3;--acs:#e9f2fc;--tx:#202936;--mut:#596575;--bg:#f3f5f8;--card:#fff;--bd:#dce2e9;--fill:#f3f5f8;--sh:0 2px 5px #17283e05}
+html[data-theme=light]{color-scheme:light;--bg:#f3f5f8;--card:#fff;--fill:#f3f5f8;--tx:#202936;--mut:#596575;--ac:#1766c3;--on-ac:#fff;--acs:#e9f2fc;--bd:#dce2e9;--ok:#18743d;--bad:#bb2434;--warn:#8a5308;--rev:#7c3ba5;--okb:#e7f3eb;--badb:#fcebed;--warnb:#fbf0db;--revb:#f1e9f8;--glass:#ffffffed;--glass-bd:#dce2e9;--sh:0 2px 5px #17283e05}
+html[data-theme=dark]{color-scheme:dark;--bg:#151a22;--card:#1e2530;--fill:#28313e;--tx:#f1f4f8;--mut:#b2becd;--ac:#80baff;--on-ac:#102b4a;--acs:#283d56;--bd:#3d4a5b;--ok:#84d4a5;--bad:#ff9c9c;--warn:#f4c47b;--rev:#d1a8ef;--okb:#193b2c;--badb:#44262d;--warnb:#433723;--revb:#382b48;--glass:#1e2530ed;--glass-bd:#3d4a5b;--sh:none}
+@media(prefers-color-scheme:dark){html:not([data-theme=light]){color-scheme:dark;--bg:#151a22;--card:#1e2530;--fill:#28313e;--tx:#f1f4f8;--mut:#b2becd;--ac:#80baff;--on-ac:#102b4a;--acs:#283d56;--bd:#3d4a5b;--glass:#1e2530ed;--glass-bd:#3d4a5b;--sh:none}}
+[hidden],.hide{display:none!important}body{background-image:none;font-size:16px;line-height:1.5}main{padding:24px;max-width:1240px}button,input,select,textarea{font:inherit}input,select,textarea{max-width:100%;min-width:0}button{cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}:focus-visible{outline:3px solid var(--ac)!important;outline-offset:3px}label,.small{font-size:14px}.small{color:var(--mut)}
+.appbar{max-width:1500px;margin:auto;padding:20px 28px 14px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;gap:12px;align-items:center}.brand-icon{background:var(--ac);color:var(--on-ac);width:44px;height:44px;display:grid;place-items:center;border-radius:12px;font-weight:800;letter-spacing:-1px}.brand b{font-size:20px}.brand span:not(.brand-icon){display:block;font-size:14px;color:var(--mut)}.app-actions{display:flex;gap:16px;align-items:center}.app-actions>span{font-size:14px;color:var(--mut)}.theme-label{display:flex;align-items:center;gap:8px;margin:0}.theme-label select{padding:9px 32px 9px 12px;width:142px;min-height:44px}
+header{top:0;margin:0;border-radius:0;padding:8px 24px;background:var(--glass);border:0;border-bottom:1px solid var(--bd);box-shadow:none;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);gap:6px}header button{min-height:44px;border-radius:10px;padding:10px 16px}header button.on{box-shadow:inset 0 -2px var(--ac)}.card{border:1px solid var(--bd);border-radius:16px;padding:24px;box-shadow:var(--sh)}h2,.card>h2{font-size:22px;margin-top:0}button.btn{border-radius:10px;min-height:44px;padding:11px 16px}.wf-ic,#tab-wifi .wf-ic{min-width:44px;min-height:44px}.wf-side h3{font-size:15px}.badge{font-size:13px}.wf-head{font-size:14px}.wf-row{font-size:14px;content-visibility:visible;contain-intrinsic-size:none}.wf-tools{gap:10px}.wf-tbl{overflow-x:auto}.wf-head,.wf-row{min-width:1040px;grid-template-columns:30px 124px 64px 78px 94px 94px 66px 128px minmax(112px,1fr) 148px;gap:8px}.c-act{width:148px;gap:4px}.c-sp{min-width:0}.c-cls,.wf-head>span:nth-child(4){display:block}.wf-grid{grid-template-columns:220px minmax(0,1fr) 220px;grid-template-areas:"dash main card";gap:16px}.wf-main{min-width:0}.wf-main>.card{padding:18px}.wf-kpi{border-radius:10px}.wf-side .card,.wf-cardp .card{padding:16px}.wf-side,.wf-cardp{min-width:0}.wf-cardp p{line-height:1.6}
+.modal{backdrop-filter:none;-webkit-backdrop-filter:none;overscroll-behavior:contain}.modal>.card{max-height:92dvh;overflow:auto;color:var(--tx)}#wfEd>.card{width:min(620px,100%);max-width:620px;border-radius:16px}.editor-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}.editor-heading h2{margin:4px 0}.eyebrow{font-size:12px;letter-spacing:.1em;color:var(--ac);font-weight:700}.record-meta{font-size:14px;padding:12px;background:var(--fill);border-radius:10px;overflow-wrap:anywhere}.date-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.date-grid input{display:block;margin-top:6px}.period-hint{background:var(--acs);color:var(--ac);padding:12px;border-radius:10px;margin:16px 0}textarea{width:100%;resize:vertical}
+#permModal .card{width:min(680px,100%)}.permission-option{display:flex!important;align-items:center;justify-content:space-between;gap:20px;padding:14px 0;margin:0;border-bottom:1px solid var(--bd);color:var(--tx)}.permission-option b{display:block;font-size:15px}.permission-option small{display:block;color:var(--mut);font-size:14px;margin-top:3px}.permission-option input[role=switch]{appearance:none;width:48px;height:28px;border:0;border-radius:20px;background:var(--mut);position:relative;flex-shrink:0}.permission-option input[role=switch]:before{content:'';position:absolute;width:20px;height:20px;top:4px;left:4px;background:#fff;border-radius:50%;transition:transform .16s ease}.permission-option input[role=switch]:checked{background:var(--ac)}.permission-option input[role=switch]:checked:before{transform:translateX(20px)}
+.wcdes{grid-template-columns:390px minmax(0,1fr)}.wcctl{padding:24px;gap:6px}.wcctl>label{margin-top:16px}.wc-workspace{min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}.preview-toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 24px;background:var(--card);border-bottom:1px solid var(--bd)}.preview-toolbar label{display:flex;gap:8px;align-items:center;margin:0}.preview-toolbar select{width:140px;min-height:44px;padding:8px 28px 8px 10px}.preview-toolbar b{font-size:15px}.wcprev{flex:1;min-height:0;background:var(--fill)}.wc-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding:14px;gap:12px;border:1px solid var(--bd);margin-bottom:12px;border-radius:12px}.wc-row-title{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between}.wc-row label{margin:0;color:var(--tx)}.wc-row label input{display:block;width:100%;margin-top:6px}.wc-row .wc-date{grid-column:1/-1}.password-field{display:flex;align-items:center;gap:4px}.password-field input{width:0;flex:1}.password-field button{margin-top:6px}.wc-langs .wc-lg:has(input:checked){background:var(--acs);box-shadow:inset 0 0 0 1px var(--ac)}#wcPv .wc-lg{min-height:44px;font-size:14px!important;padding:8px;gap:5px}.wcact{bottom:-24px;gap:8px;padding-top:16px}.wcact button{font-size:14px}.wcct{gap:12px}.wcct h2{font-size:22px}
+#loginBox .card{width:min(440px,100%);box-shadow:var(--sh)}#usersList .item{flex-wrap:wrap}#usersList .item .t{min-width:180px}.rolesel{margin-top:8px}
+@media screen{section:not(.hide){animation:panel-in .16s ease-out}@keyframes panel-in{from{opacity:.65;transform:translateY(4px)}to{opacity:1;transform:none}}.btn,.wf-ic{transition:background-color .15s,transform .12s}.wcpg{box-shadow:0 2px 12px #17283e22}.wcpg input{font-family:inherit}}
+@media(max-width:1599px){.wf-grid{grid-template-columns:210px minmax(0,1fr);grid-template-areas:"dash main" "card main";grid-template-rows:auto 1fr}.wf-cardp{grid-column:auto;position:static;max-height:none}.wf-cardp .card{display:block}.wf-cardp h2{border:0;min-width:0}.wf-cardp .btn{max-width:none}}
+@media(max-width:960px){.wf-grid{grid-template-columns:1fr;grid-template-areas:"dash" "main" "card";grid-template-rows:auto}.wf-side{display:grid;grid-template-columns:1fr 1fr;gap:12px}.wf-side .card{margin:0}.wf-cardp{grid-column:auto}.app-actions>span{display:none}}
+@media(max-width:860px){.wcdes{display:flex;flex-direction:column}.wcctl{max-height:53dvh;flex:0 0 auto;padding:16px;border-right:0}.wc-workspace{flex:1;min-height:160px}.wcact{bottom:-16px}.preview-toolbar{padding:8px 16px}.preview-toolbar .small{display:block;font-size:12px}.preview-toolbar select{width:128px}}
+@media(max-width:760px){.wf-row{min-width:0;gap:8px}.wf-tbl{overflow-x:visible}.c-act{width:auto}.c-sp{max-width:100%;overflow-wrap:anywhere}.wf-det{flex:1 1 100%}}
+@media(max-width:600px){.appbar{padding:16px;align-items:flex-start}.brand span:not(.brand-icon){font-size:12px;max-width:145px}.brand{gap:8px}.app-actions{gap:8px;flex-direction:column;align-items:flex-end}.theme-label{font-size:0}.theme-label select{font-size:14px;width:128px}.app-actions #quickLogout{padding:4px 12px;min-height:36px;font-size:14px}header{padding:6px 10px;justify-content:flex-start;flex-wrap:wrap;margin:0;border-radius:0}header button{font-size:14px;flex:0 0 auto;padding:8px 12px}main,body.wide main{padding:16px}.card{padding:16px;border-radius:12px}.wf-side{display:block}.wf-side>.card:not(:first-child){margin-top:12px}.wf-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.wf-cardp .card{display:block}.wf-cardp .btn{max-width:none}.wf-cardp h2{margin-bottom:8px}.date-grid{grid-template-columns:1fr}.modal{padding:12px}.wf-main>.card{padding:14px}.wf-tools{grid-template-columns:1fr 1fr}.wf-tools input{grid-column:1/-1}.wf-pick{gap:8px}.btns .btn{flex:1 1 auto}.wcct h2{font-size:20px}.wcctl{max-height:53dvh}.preview-toolbar b{font-size:14px}.preview-toolbar label{font-size:0}.preview-toolbar select{font-size:14px;width:120px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@media print{.preview-toolbar{display:none!important}.wc-workspace{display:block!important;overflow:visible!important}.wcprev{display:block!important}.wcpg{color-scheme:light}html,body{height:auto!important;overflow:visible!important;margin:0!important;padding:0!important}#wcPv{inset:auto!important;min-height:0!important;height:auto!important}.wcpg{break-inside:avoid;page-break-inside:avoid}}
+
+</style>
 </head>
 <body>
-<header>
+<div class="appbar"><div class="brand"><span class="brand-icon">IT</span><div><b>Инвентарь</b><span>Оборудование · Wi-Fi · Документы</span></div></div><div class="app-actions"><span id="accountBadge">Рабочее пространство</span><label class="theme-label">Тема<select id="themePick" aria-label="Цветовая тема"><option value="auto">Системная</option><option value="light">Светлая</option><option value="dark">Тёмная</option></select></label><button id="quickLogout" class="btn sec">Выйти</button></div></div>
+<header aria-label="Разделы сайта">
   <button data-tab="add" class="on">➕ Добавить</button>
   <button data-tab="list">📋 Список (<span id="cnt">0</span>)</button>
   <button data-tab="docs">📄 Документы</button>
@@ -417,7 +439,7 @@
     <label>Логин (латиница, цифры, . _ -)</label>
     <input id="nuLogin" autocapitalize="none" autocomplete="off">
     <label>Пароль (минимум 6 символов)</label>
-    <input id="nuPass" autocomplete="off">
+    <input id="nuPass" type="password" autocomplete="new-password">
     <div class="btns"><button class="btn" id="nuAdd">Создать</button></div>
   </div>
   <div class="card">
@@ -465,14 +487,14 @@
  <div class="wf-grid">
   <aside class="wf-side" id="wfDash"></aside>
   <div class="wf-main">
-   <div class="card">
+   <div class="card" data-feature-panel="wifi.manage">
     <h2>Загрузка отчётов приёмной</h2>
     <p class="small">Читается только лист «Wi-Fi». «Bottled Water» игнорируется. Файлы не сохраняются: данные считываются и файл сразу отбрасывается.</p>
-    <input type="file" id="wfFiles" accept=".xlsx" multiple>
+    <label class="upload-zone" for="wfFiles" role="button" tabindex="0"><b>＋ Выбрать Excel-отчёты</b><span class="small">Можно загрузить несколько файлов .xlsx</span></label><input type="file" id="wfFiles" accept=".xlsx" multiple class="sr-only" tabindex="-1">
     <p class="small" id="wfLog"></p>
     <div class="btns" style="margin-top:8px"><button class="btn sec" id="wfExp">⬇️ Копия реестра</button><button class="btn sec" id="wfImpBtn">⬆️ Загрузить копию</button><input type="file" id="wfImp" accept=".json,application/json" class="hide"></div>
    </div>
-   <div class="card hide" id="wfConf"></div>
+   <div class="card hide" id="wfConf" data-feature-panel="wifi.manage"></div>
    <div class="card">
     <h2>Реестр аккаунтов (<span id="wfN">0</span>)</h2>
     <div class="wf-tools">
@@ -486,11 +508,11 @@
      <button class="btn sec hide" id="wfAccAll"></button><button class="btn sec hide" id="wfDelSel"></button>
     </div>
     <div class="wf-tbl">
-     <div class="wf-head"><label class="c-chk"><input type="checkbox" id="wfAll" title="Выбрать все показанные"></label><span>Комната / кровать</span><span>Здание</span><span>Класс</span><span>Начало</span><span>Окончание</span><span>Осталось</span><span>Статус</span><span>Спонсор</span><span></span></div>
+     <div class="wf-head"><label class="c-chk"><input type="checkbox" id="wfAll" title="Выбрать все записи по текущему фильтру, на всех страницах"></label><span>Комната / кровать</span><span>Здание</span><span>Класс</span><span>Начало</span><span>Окончание</span><span>Осталось</span><span>Статус</span><span>Спонсор</span><span></span></div>
      <div id="wfList"></div>
     </div>
    </div>
-   <div class="card">
+   <div class="card" data-feature-panel="wifi.report">
     <h2>Отчёт (выбрано: <span id="wfSelN">0</span>)</h2>
     <label>Месяц отчёта</label><input type="month" id="wfM">
     <div id="wfPrev"></div>
@@ -504,9 +526,13 @@
    <button class="btn" id="wcOpen" style="width:100%">＋ Создать карточку</button>
   </div></aside>
  </div>
- <div id="wfEd" class="modal"><div class="card">
-  <h2>Изменить даты</h2><p class="small" id="wfEdT"></p><p class="small" id="wfEdH" style="color:var(--bad)"></p>
-  <label>Начало</label><input type="date" id="wfEdS"><label>Окончание</label><input type="date" id="wfEdE">
+ <div id="wfEd" class="modal" role="dialog" aria-modal="true" aria-labelledby="wfEdTitle"><div class="card">
+  <div class="editor-heading"><div><span class="eyebrow">РЕЕСТР WI-FI</span><h2 id="wfEdTitle">Редактирование периода</h2></div><button class="wf-ic" id="wfEdClose" aria-label="Закрыть">×</button></div>
+  <p id="wfEdT"></p><div class="record-meta" id="wfEdMeta"></div><p class="small" id="wfEdH" style="color:var(--bad)"></p>
+  <div class="date-grid"><label>Активно с<input type="date" id="wfEdS" required></label><label>Активно по<input type="date" id="wfEdE" required></label></div>
+  <div class="period-hint" id="wfEdPeriod" aria-live="polite"></div>
+  <label for="wfEdReason">Причина изменения <span aria-hidden="true">*</span></label><textarea id="wfEdReason" maxlength="300" rows="2" placeholder="Например: продление подтверждено приёмной"></textarea>
+  <p class="small">Здание, комната и кровать не меняются. Старые и новые даты и причина попадут в журнал. До подтверждения сервера окно останется открытым.</p>
   <div class="btns"><button class="btn" id="wfEdOk">Сохранить</button><button class="btn sec" id="wfEdX">Отмена</button><button class="btn del" id="wfEdDel">Удалить запись</button></div>
  </div></div>
 </section>
@@ -559,9 +585,9 @@
 <div class="toast" id="toast"></div>
 <input type="file" id="photo" accept="image/*" capture="environment" class="hide">
 
-<div id="wcPv" class="modal"><div class="wcdes">
+<div id="wcPv" class="modal" role="dialog" aria-modal="true" aria-label="Конструктор карточек Wi-Fi"><div class="wcdes">
  <div class="wcctl">
-  <div class="wcct"><h2>Карточка Wi-Fi</h2><button class="wf-ic" id="wcPvX" title="Закрыть">✕</button></div>
+  <div class="wcct"><h2>Карточка Wi-Fi</h2><button class="wf-ic" id="wcPvX" title="Закрыть">×</button></div>
   <label>Язык инструкции</label>
   <div class="wc-langs"><label class="wc-lg"><input type="checkbox" value="kk"> Қазақша</label><label class="wc-lg"><input type="checkbox" value="ru"> Русский</label><label class="wc-lg"><input type="checkbox" value="en"> English</label></div>
   <label>Карточек на листе A4</label>
@@ -573,11 +599,12 @@
    <label>Название сети</label><input id="wcSsid"><label>Телефон</label><input id="wcPhone"><label>Подпись</label><input id="wcSign">
   </details>
   <p class="small" id="wcMsg" style="color:var(--bad)"></p>
-  <p class="small">Логины и пароли нигде не сохраняются.</p>
+  <p class="small">Логины и пароли не отправляются на сервер и не сохраняются в браузере. При закрытии редактора очищаются. Скачанный Word и PDF содержат введённые данные — храните их безопасно.</p>
   <div class="btns wcact"><button class="btn" id="wcPvP">🖨 Печать / PDF</button><button class="btn sec" id="wcDoc">⬇ Word (.docx)</button></div>
  </div>
- <div class="wcprev" id="wcPrev"><div id="wcPages"></div></div>
+ <div class="wc-workspace"><div class="preview-toolbar"><div><b>Предпросмотр A4</b><span id="wcPreviewInfo" class="small"></span></div><label>Масштаб<select id="wcZoomPick"><option value="auto">По ширине</option><option value=".75">75%</option><option value="1">100%</option></select></label></div><div class="wcprev" id="wcPrev"><div id="wcPages"></div></div></div>
 </div></div>
+<div id="permModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="permTarget"><div class="card"><div class="editor-heading"><h2 id="permTarget">Доступ пользователя</h2><button id="permClose" class="wf-ic" aria-label="Закрыть">×</button></div><p class="small">Сервер проверяет чтение и изменение данных при каждом запросе. Администраторы имеют полный доступ. Зависимые функции отключаются вместе с просмотром.</p><div class="btns"><button id="permAll" class="btn sec">Разрешить всё</button><button id="permView" class="btn sec">Только просмотр</button></div><div id="permOptions"></div><p class="small">Экспорт и печать в браузере — настройка интерфейса, а не защита от копирования уже доступных данных. Изменения прав записываются в серверный журнал.</p><div class="btns"><button id="permSave" class="btn">Сохранить доступ</button></div></div></div>
 <div id="wcMeas" class="wcmeas"></div>
 <script>
 /* ============ НАСТРОЙКИ ============ */
@@ -610,7 +637,7 @@ const todayText = () => new Date().toLocaleDateString('ru-RU');
 const SESS_KEY='writeoff_session_v2';
 let DB_KEY='',ST_KEY='',SY_KEY='';
 const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
-const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast('Не удалось сохранить в браузере!')}};
+const save=(k,v)=>{try{(k===SESS_KEY?sessionStorage:localStorage).setItem(k,JSON.stringify(v))}catch(e){toast('Не удалось сохранить в браузере!')}};
 let items=[], settings={}, editId=null, sess=null, allItems=[], allMode=false, sync={up:[],rm:[]};
 const sel=new Set();
 const DICT_KEY='writeoff_dict_v1';
@@ -656,15 +683,16 @@ $('#lgGo').onclick=async()=>{
   lgMsg('Вход...');
   try{
     const j=await api({url,login,pass},'login');
-    sess={url,login:j.login,pass,role:j.role};
+    sess={url,login:j.login,pass,role:j.role,permissions:j.permissions||{}};
     save(SESS_KEY,sess);try{localStorage.setItem('writeoff_url',url)}catch(e){}
     startApp();
   }catch(e){lgMsg(e.code?'Ошибка: '+e.message:'Нет связи. Проверьте интернет и ссылку.')}
 };
 $('#lgPass').onkeydown=e=>{if(e.key==='Enter')$('#lgGo').click()};
 function logout(msg){
-  try{localStorage.removeItem(SESS_KEY)}catch(e){}
+  try{localStorage.removeItem(SESS_KEY);sessionStorage.removeItem(SESS_KEY)}catch(e){}
   if(hb){clearInterval(hb);hb=null}
+  wcClose();wfReg=null;wfRegKey='';wfVer=0;wfSel.clear();wfOpen.clear();
   sess=null;items=[];allItems=[];sel.clear();
   document.body.classList.remove('admin');
   document.querySelector('[data-tab=add]').click();
@@ -675,6 +703,8 @@ $('#logout').onclick=()=>{if(confirm('Выйти? Несинхронизиров
 let hb=null;
 function applyRole(){
   document.body.classList.toggle('admin',sess.role==='admin');
+  $('#accountBadge').textContent=sess.login+' · '+(sess.role==='admin'?'Администратор':'Пользователь');
+  applyPermissions();
   $('#who').innerHTML='Вы вошли как <b>'+esc(sess.login)+'</b> ('+(sess.role==='admin'?'администратор':'обычный пользователь')+')';
 }
 function startApp(){
@@ -704,10 +734,12 @@ function startApp(){
 async function refreshAccount(){
   try{
     const j=await api(sess,'login');
+    if(j.v<4){logout('Обновите Code.gs до версии 4 и создайте новое развёртывание.');return}
+    sess.permissions=j.permissions||{};save(SESS_KEY,sess);applyPermissions();
     if(j.role!==sess.role){sess.role=j.role;save(SESS_KEY,sess);applyRole();buildForm()}
     if(!(j.v>=3))toast('Скрипт Google устарел: обновите Code.gs (см. инструкцию)');
     if(await loadDict(true))await offerLegacyMigration();
-    await pullMine();
+    if(can('inventory.view'))await pullMine();
     flush();
   }catch(e){
     if(e.code==='auth'){logout('Пароль изменён. Войдите заново.');return}
@@ -735,7 +767,7 @@ async function pullMine(){
     if(merged.has(id)||pendRm.has(id))return;
     if(deleted.has(id)&&!pendUp.has(x.id))return;   // удалено на другом устройстве
     merged.set(id,x);
-    if(!pendUp.has(x.id)){sync.up.push(x.id);pendUp.add(x.id)}   // есть только здесь — отправим на сервер
+    if(can('inventory.edit')&&!pendUp.has(x.id)){sync.up.push(x.id);pendUp.add(x.id)}   // есть только здесь — отправим на сервер
   });
   sync.up=sync.up.filter(id=>merged.has(String(id)));
   items=[...merged.values()];
@@ -748,6 +780,7 @@ async function ping(){
   if(!sess||document.hidden)return;
   try{
     const j=await api(sess,'ping');
+    sess.permissions=j.permissions||{};save(SESS_KEY,sess);applyPermissions();
     if(j.role&&j.role!==sess.role){sess.role=j.role;save(SESS_KEY,sess);applyRole();buildForm();buildSettings()}
   }catch(e){if(e.code==='auth')logout('Пароль изменён. Войдите заново.')}
 }
@@ -830,6 +863,7 @@ $('#dictTypes').onclick=()=>openDictModal('types');
 
 let usersTimer=null;
 document.querySelectorAll('header button').forEach(b=>b.onclick=()=>{
+  if(sess&&!tabAllowed(b.dataset.tab))return;
   document.querySelectorAll('header button').forEach(x=>x.classList.toggle('on',x===b));
   ['add','list','docs','users','wifi','data'].forEach(t=>$('#tab-'+t).classList.toggle('hide',t!==b.dataset.tab));
   if(usersTimer){clearInterval(usersTimer);usersTimer=null}
@@ -839,9 +873,9 @@ document.querySelectorAll('header button').forEach(b=>b.onclick=()=>{
     if(!docDateTouched&&$('#s_date'))$('#s_date').value=todayISO();   // дата всегда актуальная
     if(sess)loadDict(true);
   }
-  if(b.dataset.tab==='users'){renderUsers();usersTimer=setInterval(()=>{if(!document.hidden)renderUsers(true)},30000)}
+  if(b.dataset.tab==='users'){renderUsers();usersTimer=setInterval(()=>{if(!document.hidden&&!$('#permModal').classList.contains('on'))renderUsers(true)},30000)}
   document.body.classList.toggle('wide',b.dataset.tab==='wifi');
-  if(b.dataset.tab==='wifi'){wfRender();wfPull().then(wfRender)}
+  if(b.dataset.tab==='wifi'){if(can('wifi.view')){wfRender();wfPull().then(wfRender)}applyPermissions()}
   if(b.dataset.tab==='data')showSize();
 });
 
@@ -875,6 +909,7 @@ function clearForm(keepPlace){
   $('#chips').innerHTML='';$('#ocrStatus').textContent='';
 }
 function saveItem(next){
+  if(!demand('inventory.edit'))return;
   const o=readForm();
   if(!o.asset&&!o.serial&&!o.model){toast('Заполните хотя бы номер, серийный или модель');return false}
   if(editId){const i=items.findIndex(x=>x.id===editId);items[i]={...o,id:editId,ts:Date.now()}}
@@ -1035,6 +1070,7 @@ function preprocess(cv,bw){
 async function readBarcodes(canvas){
   const out=[];
   try{if('BarcodeDetector' in window){const det=new BarcodeDetector();(await det.detect(canvas)).forEach(b=>b.rawValue&&out.push(b.rawValue))}}catch(e){}
+  if(!out.length){try{await ensureLibrary('ZXing','https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js')}catch(e){}}
   if(!out.length&&window.ZXing){
     try{
       const hints=new Map();hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
@@ -1061,6 +1097,7 @@ async function runOcr(useCrop){
     preprocess(cv,$('#bw').checked);
     if(!worker){
       st.textContent='Загрузка распознавания (первый раз ~10 сек)...';
+      await ensureLibrary('Tesseract','https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
       worker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')$('#cropSt').textContent='Распознаю: '+Math.round(m.progress*100)+'%'}});
     }
     const num=NUMF[scanField];
@@ -1136,6 +1173,7 @@ function renderList(){
     const id=b.dataset.del;
     items=items.filter(x=>x.id!==id);sel.delete(sess.login+'|'+id);save(DB_KEY,items);updCnt();renderList();queueRm(id);
   });
+  applyPermissions();
   document.querySelectorAll('[data-delany]').forEach(b=>b.onclick=async()=>{
     const x=allItems.find(y=>K(y)===b.dataset.delany);if(!x)return;
     if(!confirm('Удалить устройство пользователя '+x.owner+'?'))return;
@@ -1175,8 +1213,9 @@ async function renderUsers(silent){
         <span class="small">${esc(agoText(u.lastSeen,j.now))} · ${DEV_ICON[u.device]||'❔'} ${esc(DEV_NAME[u.device]||'устройство неизвестно')} · записей: ${u.count}</span>
         ${u.main?'<br><span class="small">Роль: Администратор</span>':`<br><select class="rolesel" data-role="${esc(u.login)}"><option value="user" ${u.role==='user'?'selected':''}>Обычный пользователь</option><option value="admin" ${u.role==='admin'?'selected':''}>Администратор</option></select>`}
       </div>
-      ${u.main?'':`<button class="btn sec" data-pw="${esc(u.login)}" title="Сменить пароль">🔑</button><button class="btn sec" data-ud="${esc(u.login)}" title="Удалить">🗑</button>`}
+      ${u.main?'':`<button class="btn sec" data-permissions="${esc(u.login)}" ${u.role==='admin'?'disabled':''}>Доступ</button><button class="btn sec" data-pw="${esc(u.login)}" title="Сменить пароль">🔑</button><button class="btn sec" data-ud="${esc(u.login)}" title="Удалить">🗑</button>`}
       </div>`).join('');
+    box.querySelectorAll('[data-permissions]').forEach(b=>b.onclick=()=>openPermissions(j.users.find(u=>u.login===b.dataset.permissions)));
     box.querySelectorAll('[data-role]').forEach(sl=>sl.onchange=async()=>{
       const prev=sl.value==='admin'?'user':'admin';
       if(!confirm('Сменить роль «'+sl.dataset.role+'» на «'+(sl.value==='admin'?'Администратор':'Обычный пользователь')+'»?')){sl.value=prev;return}
@@ -1207,7 +1246,8 @@ function queueUp(id){if(!sess)return;sync.rm=sync.rm.filter(x=>x!==id);if(!sync.
 function queueRm(id){if(!sess)return;sync.up=sync.up.filter(x=>x!==id);if(!sync.rm.includes(id))sync.rm.push(id);sysave();flush()}
 let flushing=false;
 async function flush(){
-  if(!sess||flushing||(!sync.up.length&&!sync.rm.length))return;
+  if(!sess||!can('inventory.view')||flushing||(!sync.up.length&&!sync.rm.length))return;
+  if((sync.up.length&&!can('inventory.edit'))||(sync.rm.length&&!can('inventory.delete'))){syMsg('Есть локальные изменения, но права на их отправку отключены. Обратитесь к администратору.');return}
   flushing=true;
   try{
     const sent=[...sync.up], rm=[...sync.rm];
@@ -1665,7 +1705,7 @@ function wfFlags(r){
   if(!r.start)f.push(r.rawStart?'Некорректная дата начала «'+r.rawStart+'»':'Нет даты начала');
   if(!r.end)f.push(r.rawEnd?'Некорректная дата окончания «'+r.rawEnd+'»':'Нет даты окончания');
   if(r.start&&r.end&&wfDn(r.end)<wfDn(r.start))f.push('Дата окончания раньше начала');
-  if(!/^A\d+$/.test(r.building))f.push(r.building?'Здание «'+r.building+'» не в формате A##':'Нет здания');
+  if(!/^A\d{2}$/.test(r.building))f.push(r.building?'Здание «'+r.building+'» не в формате A##':'Нет здания');
   if(!r.room)f.push('Нет комнаты');
   else if(r.building&&!r.room.startsWith(r.building))f.push('Комната «'+r.roomBed+'» не соответствует зданию '+r.building);
   if(r.bed===null)f.push('Не указана кровать (A/B)');
@@ -1827,7 +1867,7 @@ function wfStats(reg,today){
 
 /*==WIFI_UI_START==*/
 /* Wi-Fi module UI. Server (Apps Script) is the source of truth; localStorage is an offline cache. */
-let wfReg=null,wfRegKey='',wfVer=0,wfEdId=null;const wfSel=new Set(),wfOpen=new Set();
+let wfReg=null,wfRegKey='',wfVer=0,wfEdId=null,wfPage=0;const WF_PAGE_SIZE=100;const wfSel=new Set(),wfOpen=new Set();
 const WF_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const WF_LBL={active:['Active','on'],soon:['Expiring Soon','soon'],expired:['Expired','exp'],review:['Needs Review','rev']};
 const WF_C={active:'var(--ok)',soon:'var(--warn)',expired:'var(--bad)',review:'var(--rev)'};
@@ -1839,12 +1879,13 @@ async function wfPull(quiet){
   wfLoad();if(!sess)return;
   try{
     const j=await api(sess,'wifi.get');
-    if(j.version===0&&wfReg.recs.length){wfVer=0;await wfSave();return}   // first use: upload existing local registry
+    if(j.version===0&&wfReg.recs.length&&can('wifi.manage')){wfVer=0;await wfSave();return}   // first use: upload existing local registry
     wfReg=wfNormalize({recs:j.reg.recs||[],rejected:j.reg.rejected||[],same:j.reg.same||wfReg.same,log:j.reg.log||wfReg.log});wfVer=j.version;wfCache();
     [...wfSel].forEach(id=>{if(!wfReg.recs.some(r=>r.id===id))wfSel.delete(id)});
   }catch(e){if(!quiet)toast('Реестр: '+(e.code==='unknown'?'обновите Code.gs (см. wifi_patch.gs)':e.message)+'. Показана локальная копия.')}
 }
 async function wfSave(){
+  if(!demand('wifi.manage'))return false;
   wfCache();
   try{const j=await api(sess,'wifi.put',{baseVersion:wfVer,reg:{recs:wfReg.recs,rejected:wfReg.rejected,same:wfReg.same,log:wfReg.log}});wfVer=j.version;return true}
   catch(e){
@@ -1872,22 +1913,25 @@ function wfRow(r,t){
   const s=wfStatus(r,t),L=wfLeft(r,t),lb=WF_LBL[s],nw=r.flags.length+r.warn.length+r.conflicts.length+(r.alt?1:0),last=r.sources[r.sources.length-1];
   const hist=r.history.map(h=>wfRu(h.at.slice(0,10))+' '+h.type+': '+h.detail).join('; ');
   const det=wfOpen.has(r.id)?'<div class="wf-det">'+r.conflicts.map(c=>'<div class="w">⚠ Конфликт дат: '+esc(c.kind)+'</div>').concat(r.flags.concat(r.warn).map(f=>'<div class="w">⚠ '+esc(f)+'</div>')).join('')
-    +(r.alt?'<div class="w">⚠ '+esc(wfAltText(r))+' <button class="wf-ic" data-wfacc="'+r.id+'">Это одно и то же</button></div>':'')
+    +(r.alt?'<div class="w">⚠ '+esc(wfAltText(r))+' <button class="wf-ic" data-wfacc="'+esc(r.id)+'">Это одно и то же</button></div>':'')
     +'<div class="m">Работодатель: '+esc(r.employer||'—')+' · файлов-источников: '+r.sources.length+' · последний: '+esc(last?last.file:'—')+'</div>'+(hist?'<div class="m">История: '+esc(hist)+'</div>':'')+'</div>':'';
-  return '<div class="wf-row"><label class="c-chk"><input type="checkbox" data-wf="'+r.id+'"'+(wfSel.has(r.id)?' checked':'')+'></label>'
+  return '<div class="wf-row"><label class="c-chk"><input type="checkbox" data-wf="'+esc(r.id)+'"'+(wfSel.has(r.id)?' checked':'')+'></label>'
     +'<b class="c-room">'+esc(r.roomBed||'—')+'</b><span class="c-bld">'+esc(r.building||'—')+'</span><span class="c-cls">'+esc(r.roomClass||'—')+'</span>'
     +'<span class="c-d">'+wfRu(r.start)+'</span><span class="c-d">'+wfRu(r.end)+'</span>'
     +'<span class="c-left'+(L!==null&&L<0?' neg':'')+'">'+(L===null?'—':L>=0?L+' дн.':'−'+(-L)+' дн.')+'</span>'
     +'<span class="c-st"><span class="badge '+lb[1]+'">'+lb[0]+'</span></span><span class="wf-br"></span>'
     +'<span class="c-sp" title="'+esc(r.sponsor)+'">'+esc(r.sponsor)+'</span>'
-    +'<span class="c-act"><button class="wf-ic'+(nw?' warn':'')+'" data-wfinfo="'+r.id+'" title="Подробности">'+(nw?'⚠ '+nw:'ⓘ')+'</button><button class="wf-ic" data-wffix="'+r.id+'" title="Изменить даты">✎</button><button class="wf-ic wf-x" data-wfdel="'+r.id+'" title="Удалить">🗑</button></span>'+det+'</div>';
+    +'<span class="c-act"><button class="wf-ic'+(nw?' warn':'')+'" data-wfinfo="'+esc(r.id)+'" title="Подробности">'+(nw?'⚠ '+nw:'ⓘ')+'</button><button class="wf-ic" data-wffix="'+esc(r.id)+'" title="Изменить даты">Правка</button><button class="wf-ic wf-x" data-wfdel="'+esc(r.id)+'" title="Удалить">🗑</button></span>'+det+'</div>';
 }
 function wfRender(){
   const reg=wfLoad(),t=wfToday(),list=wfVisible();
   $('#wfN').textContent=reg.recs.length;$('#wfDash').innerHTML=wfDash(reg,t);
   const bs=[...new Set(reg.recs.map(r=>r.building||'—'))].sort(wfNum),cb=$('#wfBld').value;
   $('#wfBld').innerHTML='<option value="">Все здания</option>'+bs.map(b=>'<option'+(b===cb?' selected':'')+'>'+esc(b)+'</option>').join('');
-  $('#wfList').innerHTML=list.length?list.map(r=>wfRow(r,t)).join(''):'<p class="small" style="padding:14px 6px">Нет записей. Загрузите отчёты приёмной.</p>';
+  wfPage=Math.max(0,Math.min(wfPage,Math.ceil(list.length/WF_PAGE_SIZE)-1));
+  const pageRows=list.slice(wfPage*WF_PAGE_SIZE,(wfPage+1)*WF_PAGE_SIZE);
+  $('#wfList').innerHTML=list.length?pageRows.map(r=>wfRow(r,t)).join(''):'<p class="small" style="padding:14px 6px">Нет записей. Загрузите отчёты приёмной.</p>';
+  if(list.length>WF_PAGE_SIZE)$('#wfList').insertAdjacentHTML('beforeend','<div class="wf-pagination"><span>Строки '+(wfPage*WF_PAGE_SIZE+1)+'–'+Math.min((wfPage+1)*WF_PAGE_SIZE,list.length)+' из '+list.length+'</span><button class="btn sec" data-wfpage="-1" '+(wfPage===0?'disabled':'')+'>Назад</button><button class="btn sec" data-wfpage="1" '+((wfPage+1)*WF_PAGE_SIZE>=list.length?'disabled':'')+'>Далее</button></div>');
   $('#wfAll').checked=list.length>0&&list.every(r=>wfSel.has(r.id));
   const na=reg.recs.filter(r=>r.alt).length;$('#wfAccAll').classList.toggle('hide',!na);$('#wfAccAll').textContent='✓ Подтвердить одинаковые названия ('+na+')';
   const idx=new Map(reg.recs.map((r,i)=>[r.id,i])),pairs=[];
@@ -1897,10 +1941,10 @@ function wfRender(){
     '<div class="item" style="display:block"><b>'+esc(a.roomBed)+'</b> · '+esc(k)+'<br>'
     +'В реестре: '+wfRu(a.start)+' – '+wfRu(a.end)+' <span class="small">('+esc(a.sources[0].file)+')</span><br>'
     +'Новая запись: '+wfRu(b.start)+' – '+wfRu(b.end)+' <span class="small">('+esc(b.sources[0].file)+')</span>'
-    +'<div class="btns" style="margin-top:6px"><button class="btn sec" data-wfres="replace|'+a.id+'|'+b.id+'">Принять новые даты</button>'
-    +'<button class="btn sec" data-wfres="keep|'+a.id+'|'+b.id+'">Оставить старые</button>'
-    +'<button class="btn sec" data-wfres="both|'+a.id+'|'+b.id+'">Оба периода верны</button></div></div>').join(''):'';
-  wfPreview();
+    +'<div class="btns" style="margin-top:6px"><button class="btn sec" data-wfres="replace|'+esc(a.id)+'|'+esc(b.id)+'">Принять новые даты</button>'
+    +'<button class="btn sec" data-wfres="keep|'+esc(a.id)+'|'+esc(b.id)+'">Оставить старые</button>'
+    +'<button class="btn sec" data-wfres="both|'+esc(a.id)+'|'+esc(b.id)+'">Оба периода верны</button></div></div>').join(''):'';
+  wfPreview();applyPermissions();
 }
 function wfPreview(){
   const reg=wfLoad(),ym=$('#wfM').value,chosen=reg.recs.filter(r=>wfSel.has(r.id));
@@ -1911,9 +1955,11 @@ function wfPreview(){
     +plan.map(x=>'<div class="item"><div class="t"><b>'+esc(x.r.roomBed)+'</b> · '+(x.days?wfRu(x.s)+' – '+wfRu(x.e):wfRu(x.r.start)+' – '+wfRu(x.r.end))+' → <b>'+x.days+' дн.</b>'
     +x.err.map(e=>'<br><span class="small" style="color:var(--bad)">⛔ '+esc(e)+'</span>').join('')
     +x.warn.map(e=>'<br><span class="small" style="color:var(--bad)">⚠ '+esc(e)+'</span>').join('')+'</div></div>').join('');
-  $('#wfOkRow').classList.toggle('hide',!warns);
+  $('#wfOkRow').classList.toggle('hide',!warns);applyPermissions();
 }
 async function wfRead(files){
+  if(!demand('wifi.manage'))return;
+  await ensureLibrary('XLSX','https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
   const reg=wfLoad(),log=[];
   for(const f of files){
     try{
@@ -1960,6 +2006,7 @@ async function wfXlsx(plan,ym){
   return zip.generateAsync({type:'uint8array',compression:'DEFLATE'});
 }
 async function wfGenerate(){
+  if(!demand('wifi.report'))return;
   const reg=wfLoad(),ym=$('#wfM').value,chosen=reg.recs.filter(r=>wfSel.has(r.id));
   if(!chosen.length||!ym){toast('Выберите аккаунты и месяц');return}
   const plan=wfPlan(chosen,ym);
@@ -1972,17 +2019,21 @@ async function wfGenerate(){
 // ---- wiring ----
 async function wfCommit(){const ok=await wfSave();wfRender();return ok}
 function wfAskDel(ids){
+  if(!demand('wifi.manage'))return;
   if(!ids.length)return;
   if(!confirm('Удалить записей: '+ids.length+'?\nПовторная загрузка тех же записей из старых отчётов будет пропускаться.'))return;
   wfDelete(wfLoad(),ids);ids.forEach(id=>{wfSel.delete(id);wfOpen.delete(id)});wfCommit();
 }
 function wfEdit(id){
+  if(!demand('wifi.manage'))return;
   const r=wfLoad().recs.find(z=>z.id===id);if(!r)return;wfEdId=id;
+  $('#wfEdReason').value='';
+  $('#wfEdMeta').textContent='Спонсор: '+(r.sponsor||'—')+' · Работодатель: '+(r.employer||'—')+' · Источников: '+r.sources.length;
   $('#wfEdT').textContent=r.roomBed+' · '+(r.building||'—');$('#wfEdS').value=r.start||'';$('#wfEdE').value=r.end||'';
-  $('#wfEdH').textContent=r.start&&r.end?'':'В источнике: «'+r.rawStart+'» – «'+r.rawEnd+'»';$('#wfEd').classList.add('on');
+  $('#wfEdH').textContent=r.start&&r.end?'':'В источнике: «'+r.rawStart+'» – «'+r.rawEnd+'»';$('#wfEd').classList.add('on');wfEditHint();$('#wfEdS').focus();
 }
-$('#wfFiles').onchange=async e=>{await wfRead([...e.target.files]);e.target.value=''};
-['wfQ','wfSt','wfBld','wfSort'].forEach(id=>$('#'+id).oninput=wfRender);
+$('#wfFiles').onchange=async e=>{try{if(e.target.files.length)await wfRead([...e.target.files])}catch(err){$('#wfLog').textContent=err.message;toast(err.message)}finally{e.target.value=''}};
+let wfSearchTimer;$('#wfQ').oninput=()=>{clearTimeout(wfSearchTimer);wfSearchTimer=setTimeout(()=>{wfPage=0;wfRender()},120)};['wfSt','wfBld','wfSort'].forEach(id=>$('#'+id).oninput=()=>{wfPage=0;wfRender()});
 $('#wfM').oninput=wfPreview;$('#wfM').value=wfToday().slice(0,7);
 $('#wfAll').onchange=e=>{wfVisible().forEach(r=>e.target.checked?wfSel.add(r.id):wfSel.delete(r.id));wfRender()};
 $('#wfGo').onclick=()=>wfGenerate().catch(e=>{console.error(e);toast(e.message)});
@@ -1990,19 +2041,27 @@ $('#wfAccAll').onclick=async()=>{const reg=wfLoad(),n=wfAccept(reg,reg.recs.map(
 $('#wfDelSel').onclick=()=>wfAskDel([...wfSel]);
 $('#wfEdX').onclick=()=>$('#wfEd').classList.remove('on');
 $('#wfEdOk').onclick=async()=>{
-  if(!wfFix(wfLoad(),wfEdId,$('#wfEdS').value,$('#wfEdE').value)){toast('Проверьте даты: обе нужны, окончание не раньше начала');return}
-  $('#wfEd').classList.remove('on');await wfCommit();
+  if(!demand('wifi.manage'))return;
+  const reason=$('#wfEdReason').value.trim();if(!reason){toast('Укажите причину изменения');$('#wfEdReason').focus();return}
+  const reg=wfLoad(),before=JSON.parse(JSON.stringify(reg)),btn=$('#wfEdOk');
+  if(!wfFix(reg,wfEdId,$('#wfEdS').value,$('#wfEdE').value)){toast('Проверьте даты: обе нужны, окончание не раньше начала');return}
+  const r=reg.recs.find(x=>x.id===wfEdId);r.history[r.history.length-1].detail+=' · Причина: '+reason;
+  reg.log[0].detail+=' · Причина: '+reason;
+  btn.disabled=true;btn.textContent='Сохраняю…';
+  try{const ok=await wfCommit();if(ok){$('#wfEd').classList.remove('on');toast('Период обновлён и записан в журнал')}else{if(wfReg===reg){wfReg=before;wfCache();wfRender()}$('#wfEdH').textContent='Сохранение не подтверждено. Проверьте связь или конфликт версий, затем повторите.'}}
+  finally{btn.disabled=false;btn.textContent='Сохранить'}
 };
 $('#wfEdDel').onclick=()=>{$('#wfEd').classList.remove('on');wfAskDel([wfEdId])};
 $('#tab-wifi').addEventListener('click',async e=>{
   const g=a=>e.target.closest('['+a+']');let b;
-  if(b=g('data-wfres')){const [a,x,y]=b.dataset.wfres.split('|');wfResolve(wfLoad(),x,y,a);const r=wfLoad();wfLog(r,'Конфликт решён',a==='replace'?'принять новые даты':a==='keep'?'оставить старые':'оба периода верны');await wfCommit()}
+  if(b=g('data-wfpage')){wfPage+=Number(b.dataset.wfpage);wfRender();$('#wfQ').scrollIntoView({block:'start'})}
+  else if(b=g('data-wfres')){const [a,x,y]=b.dataset.wfres.split('|');wfResolve(wfLoad(),x,y,a);const r=wfLoad();wfLog(r,'Конфликт решён',a==='replace'?'принять новые даты':a==='keep'?'оставить старые':'оба периода верны');await wfCommit()}
   else if(b=g('data-wffix'))wfEdit(b.dataset.wffix);
   else if(b=g('data-wfdel'))wfAskDel([b.dataset.wfdel]);
   else if(b=g('data-wfinfo')){const id=b.dataset.wfinfo;wfOpen.has(id)?wfOpen.delete(id):wfOpen.add(id);wfRender()}
   else if(b=g('data-wfacc')){wfAccept(wfLoad(),[b.dataset.wfacc]);await wfCommit()}
-  else if(b=g('data-wfst')){$('#wfSt').value=$('#wfSt').value===b.dataset.wfst?'':b.dataset.wfst;wfRender()}
-  else if(b=g('data-wfb')){$('#wfBld').value=$('#wfBld').value===b.dataset.wfb?'':b.dataset.wfb;wfRender()}
+  else if(b=g('data-wfst')){wfPage=0;$('#wfSt').value=$('#wfSt').value===b.dataset.wfst?'':b.dataset.wfst;wfRender()}
+  else if(b=g('data-wfb')){wfPage=0;$('#wfBld').value=$('#wfBld').value===b.dataset.wfb?'':b.dataset.wfb;wfRender()}
   else if(b=g('data-wfpick')){const k=b.dataset.wfpick,reg=wfLoad(),t=wfToday();
     if(k==='none')wfSel.clear();else reg.recs.forEach(r=>{if(wfStatus(r,t)===k)wfSel.add(r.id)});wfRender()}
 });
@@ -2136,12 +2195,12 @@ function wcCfgRead(){
   return Object.assign(wcCfg(),{ssid:$('#wcSsid').value.trim()||WC_DEF.ssid,phone:$('#wcPhone').value.trim(),sign:$('#wcSign').value.trim(),per:wcPer,
     langs:[...document.querySelectorAll('#wcPv .wc-lg input:checked')].map(x=>x.value)});
 }
-function wcZoom(){const w=$('#wcPrev').clientWidth-32;$('#wcPages').style.zoom=Math.min(1,Math.max(.25,w/793.7))}
+function wcZoom(){const w=Math.max(1,$('#wcPrev').clientWidth-32),v=$('#wcZoomPick').value;$('#wcPages').style.zoom=v==='auto'?Math.min(1,Math.max(.1,w/793.7)):+v}
 function wcRefresh(now){
   clearTimeout(wcT);
   const run=()=>{
     const cfg=wcCfgRead();save('wf_card_cfg',{ssid:cfg.ssid,phone:cfg.phone,sign:cfg.sign,per:cfg.per,langs:cfg.langs});
-    const filled=wcRows.every(r=>r.l.trim()&&r.p.trim());
+    const filled=wcRows.every(r=>r.l.trim()&&r.p.trim()&&r.d);
     const cards=wcRows.map(r=>({l:r.l.trim()||'00000',p:r.p.trim()||'0000',d:r.d}));
     let msg='',okP=true,okD=true;
     if(!cfg.langs.length){$('#wcPages').innerHTML='';$('#wcMsg').textContent='Выберите хотя бы один язык инструкции.';$('#wcPvP').disabled=$('#wcDoc').disabled=true;return}
@@ -2149,12 +2208,16 @@ function wcRefresh(now){
     if(!fit.ok){okP=false;msg='Текст не помещается на карточку. Выберите меньше языков или меньше карточек на листе.'}
     if(!WC_B[cfg.per][3-Math.min(3,cfg.langs.length)]){okD=false;msg=msg||'Для Word такая комбинация не помещается. Выберите меньше языков или карточек.'}
     if(!filled){okP=okD=false;msg='Введите логин и пароль в каждой карточке. Сейчас в предпросмотре примерные значения.'}
+    $('#wcPreviewInfo').textContent=' · '+Math.ceil(cards.length/(+cfg.per))+' л. · '+cards.length+' карточек';
     $('#wcMsg').textContent=msg;$('#wcPvP').disabled=!okP;$('#wcDoc').disabled=!okD;wcZoom();
   };
   now?run():wcT=setTimeout(run,160);
 }
 function wcRowsRender(){
-  $('#wcRows').innerHTML=wcRows.map((r,i)=>'<div class="wc-row"><input data-wcr="'+i+'" data-k="l" placeholder="Логин" value="'+esc(r.l)+'" autocomplete="off"><input data-wcr="'+i+'" data-k="p" placeholder="Пароль" value="'+esc(r.p)+'" autocomplete="off"><input type="date" data-wcr="'+i+'" data-k="d" title="Активно до" value="'+esc(r.d)+'"><button class="wf-ic" data-wcx="'+i+'" title="Убрать карточку">✕</button></div>').join('');
+  $('#wcRows').innerHTML=wcRows.map((r,i)=>'<div class="wc-row"><div class="wc-row-title"><b>Карточка '+(i+1)+'</b><button class="wf-ic" data-wcx="'+i+'" title="Удалить карточку" aria-label="Удалить карточку '+(i+1)+'">×</button></div><label>Логин<input data-wcr="'+i+'" data-k="l" maxlength="120" value="'+esc(r.l)+'" autocomplete="off" spellcheck="false"></label><label>Пароль<div class="password-field"><input type="password" data-wcr="'+i+'" data-k="p" maxlength="120" value="'+esc(r.p)+'" autocomplete="new-password" spellcheck="false"><button class="wf-ic" type="button" data-wcshow="'+i+'" aria-label="Показать пароль">◉</button></div></label><label class="wc-date">Активно до<input type="date" data-wcr="'+i+'" data-k="d" value="'+esc(r.d)+'"></label></div>').join('');
+}
+function wcClose(){
+  clearTimeout(wcT);wcRows=[{l:'',p:'',d:''}];$('#wcPages').innerHTML='';$('#wcMeas').innerHTML='';wcRowsRender();$('#wcPv').classList.remove('on');
 }
 (function(){
   const c=wcCfg();wcPer=String(c.per);$('#wcSsid').value=c.ssid;$('#wcPhone').value=c.phone;$('#wcSign').value=c.sign;
@@ -2166,10 +2229,11 @@ function wcRowsRender(){
   $('#wcPv').addEventListener('change',e=>{if(e.target.closest('.wc-lg')||e.target.closest('details'))wcRefresh(true)});
   ['wcSsid','wcPhone','wcSign'].forEach(id=>$('#'+id).oninput=()=>wcRefresh());
   $('#wcAdd').onclick=()=>{wcRows.push({l:'',p:'',d:wcRows[wcRows.length-1].d});wcRowsRender();wcRefresh(true)};
-  $('#wcOpen').onclick=()=>{$('#wcPv').classList.add('on');wcRefresh(true)};
-  $('#wcPvX').onclick=()=>$('#wcPv').classList.remove('on');
-  $('#wcPvP').onclick=()=>window.print();
+  $('#wcOpen').onclick=()=>{if(!demand('wifi.cards'))return;$('#wcPv').classList.add('on');wcRefresh(true)};
+  $('#wcPvX').onclick=wcClose;
+  $('#wcPvP').onclick=()=>{if(demand('wifi.cards')){wcRefresh(true);if(!$('#wcPvP').disabled)window.print()}};
   $('#wcDoc').onclick=async()=>{
+    if(!demand('wifi.cards'))return;wcRefresh(true);if($('#wcDoc').disabled)return;
     try{saveBytes(await wcDocx(wcCfgRead(),wcRows.map(r=>({l:r.l.trim(),p:r.p.trim(),d:r.d}))),'WiFi cards '+wfToday()+'.docx');toast('Word-файл создан ✓')}
     catch(e){toast(e.message)}
   };
@@ -2177,9 +2241,88 @@ function wcRowsRender(){
 })();
 /*==WIFI_CARD_END==*/
 
+/* v4: explicit feature matrix. Browser-only exports are a UI policy, not DRM. */
+const FEATURES={
+ 'inventory.view':['Просмотр оборудования','Список своих устройств и синхронизация с таблицей'],
+ 'inventory.edit':['Добавление и правка','Создание устройств и изменение их полей'],
+ 'inventory.delete':['Удаление устройств','Удаление своих записей'],
+ 'documents':['Акты и заключения','Создание документов по шаблонам'],
+ 'backup.export':['Экспорт оборудования','Выгрузка JSON и Excel из браузера'],
+ 'backup.import':['Импорт оборудования','Загрузка резервной копии JSON'],
+ 'wifi.view':['Просмотр Wi-Fi','Чтение общего реестра аккаунтов'],
+ 'wifi.manage':['Изменение Wi-Fi','Импорт, правка дат, удаление, конфликты и восстановление копии'],
+ 'wifi.report':['Отчёт Wi-Fi','Выгрузка месячного отчёта и копии реестра'],
+ 'wifi.cards':['Карточки Wi-Fi','Конструктор, печать / PDF и Word']
+};
+function can(k){return !!sess&&(sess.role==='admin'||sess.permissions?.[k]===true)}
+function demand(k){if(can(k))return true;toast('Эта функция отключена администратором');return false}
+function tabAllowed(tab){return tab==='data'||(tab==='users'?sess?.role==='admin':tab==='add'?can('inventory.edit'):tab==='list'?can('inventory.view'):tab==='docs'?can('documents'):tab==='wifi'?(can('wifi.view')||can('wifi.cards')):false)}
+const FEATURE_SELECTORS={
+ 'inventory.edit':'#save,#saveNext,[data-edit],#syPush',
+ 'inventory.view':'#syPull', 'inventory.delete':'[data-del],[data-delany],#wipe',
+ 'documents':'#mkAct,#mkExp', 'backup.export':'#exp,#csv', 'backup.import':'#impBtn,#imp',
+ 'wifi.manage':'.upload-zone,#wfFiles,#wfImpBtn,#wfImp,#wfAccAll,#wfDelSel,[data-wffix],[data-wfdel],[data-wfres],[data-wfacc]',
+ 'wifi.report':'#wfGo,#wfExp', 'wifi.cards':'#wcOpen,#wcDoc,#wcPvP'
+};
+function applyPermissions(){
+ if(!sess)return;
+ document.querySelectorAll('[data-feature-panel]').forEach(e=>e.hidden=!can(e.dataset.featurePanel));
+ document.querySelectorAll('header [data-tab]').forEach(b=>{b.hidden=!tabAllowed(b.dataset.tab);b.setAttribute('aria-selected',b.classList.contains('on')?'true':'false')});
+ for(const [key,selector] of Object.entries(FEATURE_SELECTORS))document.querySelectorAll(selector).forEach(e=>{e.dataset.feature=key;e.hidden=!can(key)});
+ document.querySelector('.wf-main').hidden=!can('wifi.view');$('#wfDash').hidden=!can('wifi.view');document.querySelector('.wf-cardp').hidden=!can('wifi.cards');
+ if(!can('wifi.cards')&&$('#wcPv').classList.contains('on'))wcClose();
+ if(!can('wifi.manage'))$('#wfEd').classList.remove('on');
+ const active=document.querySelector('header button.on');if(active&&!tabAllowed(active.dataset.tab))document.querySelector('header [data-tab="data"]').click();
+}
+function openPermissions(user){
+ if(!user||user.role==='admin')return;
+ const m=$('#permModal');m.dataset.target=user.login;$('#permTarget').textContent='Доступ: '+user.login;
+ $('#permOptions').innerHTML=Object.entries(FEATURES).map(([k,v])=>'<label class="permission-option"><span><b>'+v[0]+'</b><small>'+v[1]+'</small></span><input type="checkbox" role="switch" data-perm="'+k+'" '+(user.permissions?.[k]!==false?'checked':'')+'></label>').join('');
+ m.classList.add('on');$('#permSave').focus();
+}
+$('#permSave').onclick=async()=>{
+ const permissions={};document.querySelectorAll('[data-perm]').forEach(i=>permissions[i.dataset.perm]=i.checked);
+ if(!permissions['inventory.view'])['inventory.edit','inventory.delete','documents','backup.export','backup.import'].forEach(k=>permissions[k]=false);
+ if(!permissions['inventory.edit'])permissions['backup.import']=false;
+ if(!permissions['wifi.view'])['wifi.manage','wifi.report'].forEach(k=>permissions[k]=false);
+ const b=$('#permSave');b.disabled=true;
+ try{await api(sess,'permissions.set',{target:$('#permModal').dataset.target,permissions});$('#permModal').classList.remove('on');toast('Права сохранены. Применятся при следующем запросе сервера');renderUsers()}
+ catch(e){toast(e.message)}finally{b.disabled=false}
+};
+$('#permClose').onclick=()=>$('#permModal').classList.remove('on');
+$('#permAll').onclick=()=>document.querySelectorAll('[data-perm]').forEach(i=>i.checked=true);
+$('#permView').onclick=()=>document.querySelectorAll('[data-perm]').forEach(i=>i.checked=['inventory.view','wifi.view'].includes(i.dataset.perm));
+for(const type of ['click','change'])document.addEventListener(type,e=>{
+ const t=e.target.closest('[data-feature]');if(t&&!can(t.dataset.feature)){e.preventDefault();e.stopImmediatePropagation();toast('Эта функция отключена администратором')}
+},true);
+function wfEditHint(){
+ const s=$('#wfEdS').value,e=$('#wfEdE').value,valid=!!s&&!!e&&e>=s;
+ $('#wfEdE').min=s;$('#wfEdPeriod').textContent=valid?wfRu(s)+' → '+wfRu(e)+' · '+(wfDn(e)-wfDn(s)+1)+' дн. включительно':'Укажите корректные даты начала и окончания';
+ $('#wfEdOk').disabled=!valid;
+}
+$('#wfEdS').oninput=$('#wfEdE').oninput=wfEditHint;
+$('#wfEdClose').onclick=()=>$('#wfEdX').click();
+$('#wcZoomPick').onchange=wcZoom;
+$('#wcRows').addEventListener('click',e=>{const b=e.target.closest('[data-wcshow]');if(b){const input=b.previousElementSibling;input.type=input.type==='password'?'text':'password';b.setAttribute('aria-label',input.type==='password'?'Показать пароль':'Скрыть пароль')}});
+const libPromises={};
+function ensureLibrary(name,url){
+ if(window[name])return Promise.resolve(window[name]);if(libPromises[name])return libPromises[name];
+ return libPromises[name]=new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=url;s.async=true;s.onload=()=>resolve(window[name]);s.onerror=()=>{delete libPromises[name];s.remove();reject(new Error('Не удалось загрузить '+name+'. Проверьте интернет.'))};document.head.appendChild(s)});
+}
+function setTheme(value){document.documentElement.dataset.theme=value;save('inventory_theme',value)}
+$('#themePick').value=load('inventory_theme','auto');setTheme($('#themePick').value);$('#themePick').onchange=e=>setTheme(e.target.value);
+$('#quickLogout').onclick=()=>$('#logout').click();
+document.querySelector('.upload-zone').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('#wfFiles').click()}};
+// Focus trap and Escape are limited to open dialogs; close does not commit edits.
+document.addEventListener('keydown',e=>{
+ const modal=[...document.querySelectorAll('.modal.on')].at(-1);if(!modal)return;
+ if(e.key==='Escape'&&modal.id!=='loginBox'){if(modal.id==='wcPv')wcClose();else modal.classList.remove('on');return}
+ if(e.key==='Tab'){const nodes=[...modal.querySelectorAll('button,input,select,textarea,summary')].filter(x=>!x.disabled&&!x.hidden&&x.getClientRects().length);if(!nodes.length)return;const a=nodes[0],z=nodes.at(-1);if(e.shiftKey&&document.activeElement===a){e.preventDefault();z.focus()}else if(!e.shiftKey&&document.activeElement===z){e.preventDefault();a.focus()}}
+});
+
 /* ============ СТАРТ ============ */
 (function boot(){
-  const s=load(SESS_KEY,null);
+  let s=null;try{s=JSON.parse(sessionStorage.getItem(SESS_KEY)||'null');localStorage.removeItem(SESS_KEY)}catch(e){}
   if(s&&s.url&&s.login&&s.pass){sess=s;startApp()}else initLogin();
 })();
 </script>
