@@ -43,8 +43,7 @@
   .toast.on{opacity:1}
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:20;display:none;flex-direction:column;align-items:center;padding:10px;overflow:auto;color:#fff}
   .modal.on{display:flex}
-  #cropCv{touch-action:none;max-width:100%;border-radius:6px;background:#000}
-  .modal .btns{justify-content:center}
+    .modal .btns{justify-content:center}
   .modal label.chk{display:flex;gap:8px;align-items:center;color:#ddd;font-size:14px;margin:10px 0 0}
   .modal label.chk input{width:20px;height:20px}
   #loginBox{z-index:30;background:var(--bg);justify-content:center;color:var(--tx)}
@@ -375,6 +374,127 @@ header{top:0;margin:0;border-radius:0;padding:8px 24px;background:var(--glass);b
 @media print{.preview-toolbar{display:none!important}.wc-workspace{display:block!important;overflow:visible!important}.wcprev{display:block!important}.wcpg{color-scheme:light}html,body{height:auto!important;overflow:visible!important;margin:0!important;padding:0!important}#wcPv{inset:auto!important;min-height:0!important;height:auto!important}.wcpg{break-inside:avoid;page-break-inside:avoid}}
 
 </style>
+<style>
+/* ===== v5 · сканер текста: тёмный «камерный» интерфейс, анимации только transform/opacity ===== */
+#scanModal{--sc-bg:#0b0d10;--sc-pan:#15181d;--sc-fill:#22262d;--sc-fill2:#2d323a;--sc-tx:#f3f5f7;--sc-mut:#a7b0bc;--sc-ac:#5aa2ff;--sc-ok:#4fd18b;--sc-warn:#ffc35a;--sc-bad:#ff7b7b;
+  position:fixed;inset:0;z-index:60;display:none;flex-direction:column;align-items:stretch;justify-content:flex-start;padding:0;overflow:hidden;background:var(--sc-bg);color:var(--sc-tx);color-scheme:dark;-webkit-tap-highlight-color:transparent}
+#scanModal.on{display:flex;animation:sc-fade .18s ease-out}
+#scanModal button{font:inherit;color:inherit;cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+#scanModal h4{margin:2px 0 10px;font-size:13px;font-weight:600;color:var(--sc-mut);letter-spacing:.02em}
+.sc-top{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,0px) + 8px) 12px 8px;flex:0 0 auto}
+.sc-title{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;line-height:1.25}
+.sc-title b{font-size:16px}.sc-title span{font-size:12.5px;color:var(--sc-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.sc-ib{width:44px;height:44px;flex:0 0 44px;border:0;border-radius:50%;background:var(--sc-fill);font-size:20px;line-height:1;display:grid;place-items:center;transition:transform .12s,background-color .15s}
+.sc-ib:active{transform:scale(.92);background:var(--sc-fill2)}
+.sc-done{border:0;border-radius:999px;background:var(--sc-ac);color:#06233f!important;font-weight:700;height:40px;padding:0 18px}
+.sc-body{flex:1;min-height:0;display:flex;flex-direction:column}
+.sc-stage{position:relative;flex:1;min-height:150px;overflow:hidden;touch-action:none;background:radial-gradient(circle at 50% 40%,#1a1e24,#0b0d10 70%)}
+.sc-stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.sc-zoom{position:absolute;right:10px;top:10px;display:flex;align-items:center;gap:2px;padding:3px;border-radius:999px;background:rgba(21,24,29,.82);box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.sc-zoom button{width:36px;height:36px;border:0;border-radius:50%;background:transparent;display:grid;place-items:center}.sc-zoom svg{width:18px;height:18px}
+.sc-zoom button:active{background:var(--sc-fill2)}
+.sc-zoom span{min-width:46px;text-align:center;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--sc-mut)}
+.sc-hint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);max-width:calc(100% - 24px);padding:7px 12px;border-radius:999px;background:rgba(21,24,29,.82);font-size:12.5px;color:var(--sc-mut);text-align:center;pointer-events:none;transition:opacity .4s}
+.sc-hint.off{opacity:0}
+.sc-scanbox{position:absolute;pointer-events:none;border-radius:4px;overflow:hidden;box-shadow:0 0 0 2px var(--sc-ac)}
+.sc-scanbox::after{content:"";position:absolute;left:0;right:0;top:0;height:38%;background:linear-gradient(180deg,transparent,rgba(90,162,255,.38) 85%,rgba(160,205,255,.95));animation:sc-scan 1.25s ease-in-out infinite alternate;will-change:transform}
+.sc-sheet{flex:0 0 auto;background:var(--sc-pan);border-radius:20px 20px 0 0;padding:8px 14px calc(env(safe-area-inset-bottom,0px) + 12px);box-shadow:0 -8px 24px rgba(0,0,0,.35);animation:sc-up .26s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;gap:8px;min-height:0}
+.sc-prevwrap{display:flex;align-items:center;gap:10px;min-height:44px}
+.sc-prevwrap span{font-size:11.5px;color:var(--sc-mut);flex:0 0 78px;line-height:1.25}
+.sc-prevwrap canvas{flex:0 1 auto;min-width:0;max-height:52px;border-radius:8px;background:#fff;width:auto;height:auto;max-width:calc(100% - 88px)}
+.sc-tabs{display:flex;background:var(--sc-fill);border-radius:12px;padding:3px;gap:2px}
+.sc-tabs button{flex:1;height:38px;border:0;border-radius:9px;background:transparent;color:var(--sc-mut)!important;font-size:14px;font-weight:600;transition:background-color .15s,color .15s}
+.sc-tabs button.on{background:var(--sc-fill2);color:var(--sc-tx)!important;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.sc-panes{overflow:auto;overscroll-behavior:contain;max-height:min(30dvh,250px);margin:0 -4px;padding:0 4px}
+.sc-sheet.min .sc-panes{display:none}
+.sc-pane{display:none}.sc-pane.on{display:block;animation:sc-fade .16s ease-out}
+.sc-pane h4{display:none}
+.sc-seg{display:flex;gap:6px;flex-wrap:wrap}
+.sc-seg button{flex:1 1 0;min-width:72px;min-height:42px;padding:6px 8px;border:0;border-radius:11px;background:var(--sc-fill);font-size:13.5px;font-weight:600;line-height:1.2;transition:background-color .15s,transform .1s}
+.sc-seg button:active{transform:scale(.96)}
+.sc-seg button.on{background:var(--sc-ac);color:#06233f!important}
+.sc-seg2 button{flex:1 1 calc(50% - 6px)}
+.sc-lab{margin:12px 0 6px;font-size:12.5px;font-weight:600;color:var(--sc-mut)!important}
+.sc-lab small,.sc-tg small{font-weight:400;color:var(--sc-mut);margin-left:4px}
+.sc-note{margin:10px 2px 2px;font-size:12.5px;line-height:1.45;color:var(--sc-mut)}
+.sc-tg{display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;min-height:46px;margin-top:8px;padding:6px 12px;border:0;border-radius:12px;background:var(--sc-fill);font-size:14.5px;text-align:left}
+.sc-tg i{flex:0 0 46px;height:28px;border-radius:999px;background:#4a505a;position:relative;transition:background-color .18s}
+.sc-tg i::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transition:transform .2s cubic-bezier(.2,.8,.2,1)}
+.sc-tg[aria-pressed=true] i{background:var(--sc-ok)}.sc-tg[aria-pressed=true] i::after{transform:translateX(18px)}
+.sc-rg{display:block;margin:12px 0 0;font-size:13.5px;color:var(--sc-tx)!important}
+.sc-rg output{float:right;color:var(--sc-mut);font-variant-numeric:tabular-nums}
+#scanModal input[type=range]{display:block;width:100%;height:34px;margin:2px 0 0;padding:0!important;background:transparent!important;box-shadow:none!important;accent-color:var(--sc-ac)}
+.sc-link{margin-top:12px;border:0;background:transparent;color:var(--sc-ac)!important;font-weight:600;padding:8px 0}
+.sc-act{display:flex;align-items:center;gap:12px}
+.sc-st{flex:1;min-width:0;font-size:12.5px;line-height:1.35;color:var(--sc-mut)}
+.sc-st.ok{color:var(--sc-ok)}.sc-st.bad{color:var(--sc-bad)}
+#scanModal .sc-go{position:relative;overflow:hidden;flex:0 0 auto;min-width:170px;height:52px;border-radius:15px;font-size:17px;font-weight:700;background:var(--sc-ac);color:#06233f;padding:0 22px}
+.sc-go span{position:relative;z-index:1}
+.sc-go i{position:absolute;left:0;top:0;bottom:0;width:100%;background:rgba(255,255,255,.35);transform-origin:left;transform:scaleX(0);transition:transform .25s}
+#scanModal.busy .sc-stage,#scanModal.busy .sc-panes,#scanModal.busy .sc-tabs{pointer-events:none}
+#scanModal.busy .sc-panes,#scanModal.busy .sc-tabs{opacity:.55}
+/* результат */
+.sc-res{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;background:var(--sc-bg);animation:sc-in .24s cubic-bezier(.2,.8,.2,1)}
+.sc-res[hidden]{display:none}
+.sc-rbody{flex:1;overflow:auto;overscroll-behavior:contain;padding:4px 16px calc(env(safe-area-inset-bottom,0px) + 24px);width:100%;max-width:760px;margin:0 auto;box-sizing:border-box}
+.sc-thumb{display:flex;justify-content:center;background:#fff;border-radius:14px;padding:6px;max-height:150px;overflow:hidden}
+.sc-thumb canvas{max-width:100%;max-height:138px;object-fit:contain}
+.sc-tip{margin-top:12px;padding:12px 14px;border-radius:14px;background:#3a2d10;color:#ffe2a8;font-size:13.5px;line-height:1.45}
+.sc-tip button{margin-top:8px;border:0;border-radius:10px;background:rgba(255,255,255,.14);padding:8px 12px;font-weight:600}
+.sc-found{margin-top:12px;padding:12px;border-radius:14px;background:var(--sc-pan)}
+.sc-found b{display:block;font-size:13px;color:var(--sc-mut);margin-bottom:6px;font-weight:600}
+.sc-frow{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid rgba(255,255,255,.07)}
+.sc-frow:first-of-type{border-top:0}
+.sc-frow span{flex:0 0 108px;font-size:12.5px;color:var(--sc-mut)}
+.sc-frow code{flex:1;min-width:0;font:600 15px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-wrap:anywhere}
+.sc-frow button,.sc-row button{border:0;border-radius:10px;background:var(--sc-fill);min-height:38px;padding:6px 12px;font-size:13.5px;font-weight:600}
+.sc-found .sc-all{width:100%;margin-top:8px;border:0;border-radius:12px;font-weight:700;background:var(--sc-ac);color:#06233f!important;min-height:44px}
+#scanModal select{width:100%;min-height:46px;border:0;border-radius:12px;background-color:var(--sc-fill)!important;color:var(--sc-tx)!important;padding:10px 38px 10px 12px}
+.sc-sug{display:flex;flex-wrap:wrap;gap:8px}
+.sc-sug button{max-width:100%;border:0;border-radius:999px;background:var(--sc-fill);padding:9px 14px;font:600 15px/1.25 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-wrap:anywhere;text-align:left;transition:transform .1s,background-color .15s}
+.sc-sug button:active,.sc-lines button:active{transform:scale(.97)}
+.sc-sug button.code{box-shadow:inset 0 0 0 1.5px var(--sc-ac)}
+.sc-sug button.hit{background:#1d3b2b;box-shadow:inset 0 0 0 1.5px var(--sc-ok)}
+.sc-sug em{font-style:normal;font:500 11px/1 -apple-system,system-ui,sans-serif;color:var(--sc-mut);margin-left:6px}
+#scText{width:100%;box-sizing:border-box;min-height:110px;border:0;border-radius:14px;background:var(--sc-fill)!important;color:var(--sc-tx)!important;padding:12px;font:15px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;resize:vertical}
+.sc-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}.sc-row button{flex:1}
+.sc-lines{display:flex;flex-direction:column;gap:6px}
+.sc-lines button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;border-radius:12px;background:var(--sc-pan);padding:10px 12px;font:15px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;transition:transform .1s}
+.sc-lines i{flex:0 0 8px;height:8px;border-radius:50%;background:var(--sc-ok)}
+.sc-lines i.m{background:var(--sc-warn)}.sc-lines i.l{background:var(--sc-bad)}
+.sc-lines span{flex:1;min-width:0;overflow-wrap:anywhere}
+.sc-lines u{text-decoration:underline wavy var(--sc-warn) 1px;text-underline-offset:3px}
+.sc-empty{color:var(--sc-mut);font-size:14px}
+.f-flash{animation:sc-flash .9s ease-out}
+/* источник фото — нижний лист */
+#scSrc{justify-content:flex-end;align-items:stretch;padding:0;background:rgba(0,0,0,.45);z-index:61}
+.sc-src-card{display:flex;flex-direction:column;gap:8px;width:100%;max-width:520px;margin:0 auto;padding:16px 14px calc(env(safe-area-inset-bottom,0px) + 14px);background:var(--card);color:var(--tx);border-radius:22px 22px 0 0;animation:sc-up .24s cubic-bezier(.2,.8,.2,1);box-sizing:border-box}
+.sc-src-card b{text-align:center;font-size:14px;color:var(--mut);font-weight:600;margin-bottom:4px}
+.sc-src-card button{min-height:54px;border:0;border-radius:14px;background:var(--fill);color:var(--tx);font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px}
+.sc-src-card .sc-src-x{background:transparent;color:var(--ac)}
+@keyframes sc-fade{from{opacity:0}to{opacity:1}}
+@keyframes sc-up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes sc-in{from{transform:translateX(28px);opacity:0}to{transform:none;opacity:1}}
+@keyframes sc-scan{from{transform:translateY(-100%)}to{transform:translateY(170%)}}
+@keyframes sc-flash{0%{box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 70%,transparent)}100%{box-shadow:0 0 0 3px transparent}}
+html.sc-lock,html.sc-lock body{overflow:hidden!important;overscroll-behavior:none}
+/* компьютер и планшет: фото слева, настройки справа и все разделы сразу */
+@media (min-width:900px){
+  .sc-body{flex-direction:row}
+  .sc-sheet{width:380px;border-radius:0;box-shadow:-1px 0 0 rgba(255,255,255,.06);padding:16px 18px 18px;animation:none}
+  .sc-tabs{display:none}
+  .sc-panes{max-height:none;flex:1}
+  .sc-pane{display:block;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+  .sc-pane h4{display:block}
+  .sc-prevwrap{flex-direction:column;align-items:stretch}
+  .sc-prevwrap span{flex:none}
+  .sc-prevwrap canvas{max-width:100%;max-height:110px;align-self:flex-start}
+  .sc-act{flex-direction:column;align-items:stretch}.sc-go{width:100%}
+}
+@media (max-width:899px){#scanModal .sc-go{min-width:150px}.sc-hint{white-space:nowrap}}
+@media (max-height:560px) and (max-width:899px){.sc-panes{max-height:28dvh}.sc-prevwrap{display:none}}
+@media (prefers-reduced-motion:reduce){.sc-scanbox::after{animation:none;opacity:.6;transform:translateY(60%)}}
+</style>
 </head>
 <body>
 <div class="appbar"><div class="brand"><span class="brand-icon">IT</span><div><b>Инвентарь</b><span>Оборудование · Wi-Fi · Документы</span></div></div><div class="app-actions"><span id="accountBadge">Рабочее пространство</span><label class="theme-label">Тема<select id="themePick" aria-label="Цветовая тема"><option value="auto">Системная</option><option value="light">Светлая</option><option value="dark">Тёмная</option></select></label><button id="quickLogout" class="btn sec">Выйти</button></div></div>
@@ -556,24 +676,6 @@ header{top:0;margin:0;border-radius:0;padding:8px 24px;background:var(--glass);b
   </div>
 </div>
 
-<!-- ОБРЕЗКА ФОТО -->
-<div class="modal" id="cropModal">
-  <p style="margin:6px 0;text-align:center;font-size:15px">Выделите нужную строку (номер, серийник, штрихкод). Рамку можно двигать и тянуть за углы и стороны.</p>
-  <canvas id="cropCv"></canvas>
-  <div class="cropctl">
-    <label>Ширина рамки<input type="range" id="cropW" min="24" max="720" value="200"></label>
-    <label>Высота рамки<input type="range" id="cropH" min="24" max="720" value="80"></label>
-  </div>
-  <p style="margin:8px 0 2px;font-size:13px;color:#bbb">Предпросмотр — так видит распознавание:</p>
-  <canvas id="cropPrev" class="hide"></canvas>
-  <label class="chk"><input type="checkbox" id="bw"> Чёрно-белый режим (если не читает)</label>
-  <p id="cropSt" style="margin:6px 0;font-size:14px;color:#9cf;text-align:center"></p>
-  <div class="btns">
-    <button class="btn" id="cropGo">Распознать</button>
-    <button class="btn sec" id="cropAll">Всё фото</button>
-    <button class="btn sec" id="cropCancel">Отмена</button>
-  </div>
-</div>
 <!-- СПРАВОЧНИКИ (админ) -->
 <div class="modal" id="dictModal">
   <div class="card">
@@ -583,7 +685,116 @@ header{top:0;margin:0;border-radius:0;padding:8px 24px;background:var(--glass);b
   </div>
 </div>
 <div class="toast" id="toast"></div>
+<!-- СКАНЕР ТЕКСТА: источник фото -->
+<div class="modal" id="scSrc" role="dialog" aria-modal="true" aria-label="Источник фото">
+  <div class="sc-src-card">
+    <b>Откуда взять фото?</b>
+    <button type="button" id="scCam"><span aria-hidden="true">📷</span> Сделать фото</button>
+    <button type="button" id="scGal"><span aria-hidden="true">🖼️</span> Выбрать из галереи</button>
+    <button type="button" id="scSrcX" class="sc-src-x">Отмена</button>
+  </div>
+</div>
+<!-- СКАНЕР ТЕКСТА: редактор -->
+<div class="modal" id="scanModal" role="dialog" aria-modal="true" aria-labelledby="scTitle">
+  <div class="sc-top">
+    <button type="button" class="sc-ib" id="scClose" aria-label="Закрыть сканер"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="sc-title"><b id="scTitle">Распознавание текста</b><span id="scSub"></span></div>
+    <button type="button" class="sc-ib" id="scRetake" aria-label="Другое фото" title="Другое фото"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13.5" r="3.5"/></svg></button>
+  </div>
+  <div class="sc-body">
+    <div class="sc-stage" id="scStage">
+      <canvas id="scCv" aria-label="Фото. Рамкой выделите текст для распознавания"></canvas>
+      <div class="sc-scanbox" id="scScanBox" hidden></div>
+      <div class="sc-zoom" role="group" aria-label="Масштаб">
+        <button type="button" id="scZoomOut" aria-label="Уменьшить"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h12"/></svg></button>
+        <span id="scZoomV">100%</span>
+        <button type="button" id="scZoomIn" aria-label="Увеличить"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12M6 12h12"/></svg></button>
+        <button type="button" id="scFitBtn" aria-label="Вписать фото"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      </div>
+      <div class="sc-hint" id="scHint">Тяните углы рамки · щипок — масштаб</div>
+    </div>
+    <div class="sc-sheet" id="scSheet">
+      <div class="sc-prevwrap"><span>Так видит распознавание</span><canvas id="scPrev"></canvas></div>
+      <div class="sc-tabs" role="tablist" aria-label="Настройки распознавания">
+        <button type="button" role="tab" data-sctab="area" class="on" aria-selected="true">Область</button>
+        <button type="button" role="tab" data-sctab="enh" aria-selected="false">Улучшить</button>
+        <button type="button" role="tab" data-sctab="lang" aria-selected="false">Текст</button>
+        <button type="button" role="tab" data-sctab="rot" aria-selected="false">Поворот</button>
+      </div>
+      <div class="sc-panes">
+        <div class="sc-pane on" data-scpane="area">
+          <h4>Область</h4>
+          <div class="sc-seg" data-scset="preset">
+            <button type="button" data-v="line">Строка</button><button type="button" data-v="block">Блок</button><button type="button" data-v="label">Наклейка</button><button type="button" data-v="all">Всё фото</button>
+          </div>
+          <p class="sc-note">Чем точнее рамка вокруг нужного текста, тем лучше результат. Для серийного номера выделите только его строку.</p>
+        </div>
+        <div class="sc-pane" data-scpane="enh">
+          <h4>Улучшение фото</h4>
+          <button type="button" class="sc-tg" id="scAuto" aria-pressed="true"><span>Авто-контраст</span><i></i></button>
+          <label class="sc-rg">Яркость <output id="scBrightV">0</output><input type="range" id="scBright" min="-60" max="60" value="0"></label>
+          <label class="sc-rg">Контраст <output id="scContrastV">0</output><input type="range" id="scContrast" min="-50" max="80" value="0"></label>
+          <label class="sc-rg">Резкость <output id="scSharpV">35</output><input type="range" id="scSharp" min="0" max="100" value="35"></label>
+          <div class="sc-lab">Чёрно-белый режим</div>
+          <div class="sc-seg" data-scset="bin"><button type="button" data-v="off">Нет</button><button type="button" data-v="otsu">Обычный</button><button type="button" data-v="adapt">Против бликов</button></div>
+          <div class="sc-lab">Цвет текста</div>
+          <div class="sc-seg" data-scset="inv"><button type="button" data-v="auto">Авто</button><button type="button" data-v="dark">Тёмный на светлом</button><button type="button" data-v="light">Светлый на тёмном</button></div>
+          <button type="button" class="sc-link" id="scEnhReset">Сбросить улучшения</button>
+        </div>
+        <div class="sc-pane" data-scpane="lang">
+          <h4>Что распознаём</h4>
+          <div class="sc-seg sc-seg2" data-scset="alpha">
+            <button type="button" data-v="auto">Авто · RU + EN</button><button type="button" data-v="lat">Латиница · English</button><button type="button" data-v="cyr">Кириллица · Русский</button><button type="button" data-v="codes">Коды · S/N · номера</button>
+          </div>
+          <button type="button" class="sc-tg" id="scKaz" aria-pressed="false"><span>Қазақ әріптері <small>ә і ң ғ ү ұ қ ө һ · только для казахского текста</small></span><i></i></button>
+          <div class="sc-lab">Расположение текста</div>
+          <div class="sc-seg" data-scset="psm"><button type="button" data-v="auto">Авто</button><button type="button" data-v="7">Строка</button><button type="button" data-v="6">Абзац</button><button type="button" data-v="11">Вразброс</button></div>
+          <div class="sc-lab">Точность</div>
+          <div class="sc-seg" data-scset="acc"><button type="button" data-v="fast">Быстро</button><button type="button" data-v="best">Точно · 2 прохода</button></div>
+          <button type="button" class="sc-tg" id="scBarcode" aria-pressed="true"><span>Искать штрихкод и QR</span><i></i></button>
+        </div>
+        <div class="sc-pane" data-scpane="rot">
+          <h4>Поворот</h4>
+          <div class="sc-seg sc-seg2"><button type="button" id="scRotL" aria-label="Повернуть влево на 90°"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin-right:4px"><path d="M4 4v6h6"/><path d="M4.5 10A8 8 0 1 1 6 17"/></svg>90°</button><button type="button" id="scRotR" aria-label="Повернуть вправо на 90°"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin-right:4px"><path d="M20 4v6h-6"/><path d="M19.5 10A8 8 0 1 0 18 17"/></svg>90°</button><button type="button" id="scRotAuto">Выровнять авто</button><button type="button" id="scRot0">Сброс</button></div>
+          <label class="sc-rg">Выровнять наклон <output id="scFineV">0°</output><input type="range" id="scFine" min="-20" max="20" step="0.5" value="0"></label>
+          <button type="button" class="sc-tg" id="scDeskew" aria-pressed="true"><span>Авто-выравнивание при распознавании</span><i></i></button>
+          <p class="sc-note">Строки текста должны идти горизонтально — так распознавание ошибается заметно реже.</p>
+        </div>
+      </div>
+      <div class="sc-act">
+        <span class="sc-st" id="scSt" aria-live="polite"></span>
+        <button type="button" class="btn sc-go" id="scGo"><span id="scGoT">Распознать</span><i id="scGoP"></i></button>
+      </div>
+    </div>
+  </div>
+  <!-- результат -->
+  <div class="sc-res" id="scRes" hidden>
+    <div class="sc-top">
+      <button type="button" class="sc-ib" id="scBack" aria-label="Назад к фото"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="sc-title"><b>Результат</b><span id="scResSub"></span></div>
+      <button type="button" class="sc-done" id="scDone">Готово</button>
+    </div>
+    <div class="sc-rbody">
+      <div class="sc-thumb" id="scThumb"></div>
+      <div class="sc-tip" id="scTip" hidden></div>
+      <div class="sc-found" id="scFound" hidden></div>
+      <label class="sc-lab" for="scTarget">Вставлять в поле</label>
+      <select id="scTarget"></select>
+      <div class="sc-lab">Подходящие варианты <small>нажмите, чтобы вставить</small></div>
+      <div class="sc-sug" id="scSug"></div>
+      <div class="sc-lab">Весь текст <small>можно исправить или выделить часть</small></div>
+      <textarea id="scText" rows="5" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"></textarea>
+      <div class="sc-row">
+        <button type="button" id="scInsSel">Вставить выделенное</button>
+        <button type="button" id="scCopy">Копировать</button>
+      </div>
+      <div class="sc-lab">Строки <small>цвет — уверенность распознавания</small></div>
+      <div class="sc-lines" id="scLines"></div>
+    </div>
+  </div>
+</div>
 <input type="file" id="photo" accept="image/*" capture="environment" class="hide">
+<input type="file" id="photoGal" accept="image/*" class="hide">
 
 <div id="wcPv" class="modal" role="dialog" aria-modal="true" aria-label="Конструктор карточек Wi-Fi"><div class="wcdes">
  <div class="wcctl">
@@ -924,225 +1135,501 @@ $('#save').onclick=()=>saveItem(false);
 $('#saveNext').onclick=()=>saveItem(true);
 $('#clear').onclick=()=>clearForm(false);
 
-/* ============ СКАНИРОВАНИЕ (OCR) ============ */
-let scanField=null, worker=null, srcBmp=null, crop=null, busy=false;
+/* ============ СКАНИРОВАНИЕ (OCR) v5 ============
+   Редактор фото → улучшение → Tesseract (rus+eng / eng / rus / коды, по желанию kaz) → выбор результата.
+   Фото и текст никуда не отправляются: всё распознаётся в браузере. */
+let scanField=null, busy=false;
 const NUMF={asset:1,serial:1};
-function startScan(k){scanField=k;$('#photo').value='';$('#photo').click()}
-$('#photo').onchange=async e=>{
-  const file=e.target.files[0];if(!file)return;
-  try{srcBmp=await createImageBitmap(file)}catch(err){toast('Не удалось открыть фото');return}
-  openCrop();
+const SC={src:null,work:null,crop:null,v:{s:1,ox:0,oy:0,fit:1,zoom:1},rot:0,fine:0,ptrs:new Map(),drag:null,raf:0,praf:0,vw:1,vh:1,dpr:1,touch:false,lastTap:null,pushed:false,res:null,enh:null,preset:'line'};
+const OCR_PREF_KEY='inventory_ocr_prefs';
+const scPrefs=Object.assign({alpha:{},kaz:false,acc:'best',psm:'auto',bin:'off',barcode:true,deskew:true},load(OCR_PREF_KEY,{})||{});
+const scSavePrefs=()=>{try{localStorage.setItem(OCR_PREF_KEY,JSON.stringify(scPrefs))}catch(e){}};
+const SC_ALPHA={
+  auto:{l:'RU + EN',langs:'rus+eng',wl:''},
+  lat:{l:'латиница',langs:'eng',wl:''},
+  cyr:{l:'кириллица',langs:'rus',wl:''},
+  codes:{l:'коды и номера',langs:'eng',wl:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/._:#'}
 };
+const SC_ENH0={auto:true,bright:0,contrast:0,sharp:35,inv:'auto'};
+const scAlpha=()=>scPrefs.alpha[scanField]||'auto';
+const scLangs=()=>{const a=scAlpha(),l=SC_ALPHA[a].langs;return scPrefs.kaz&&(a==='auto'||a==='cyr')?'kaz+'+l:l};
+const scVibe=()=>{try{navigator.vibrate&&navigator.vibrate(8)}catch(e){}};
+const scFieldLabel=k=>(FIELDS.find(f=>f.k===k)||{}).l||k;
+function scStatus(t,cls){const e=$('#scSt');e.textContent=t||'';e.className='sc-st'+(cls?' '+cls:'')}
 
-/* ---- Редактор области: двигать рамку, тянуть за углы и стороны, ползунки ширины/высоты, предпросмотр ---- */
-const HIT=28, MINS=24;
-let cropMode=null, cropStart=null, cropOrig=null, prevQueued=false;
-function openCrop(){
-  $('#cropModal').classList.add('on');
-  const cv=$('#cropCv');
-  const maxW=Math.min(window.innerWidth-24,720), maxH=window.innerHeight*0.5;
-  const r=Math.min(maxW/srcBmp.width,maxH/srcBmp.height);
-  cv.width=Math.round(srcBmp.width*r);cv.height=Math.round(srcBmp.height*r);cv.dataset.r=r;
-  $('#cropW').max=cv.width;$('#cropH').max=cv.height;
-  crop=null;$('#cropSt').textContent='';drawCrop();
-}
-function closeCrop(){$('#cropModal').classList.remove('on');if(srcBmp&&srcBmp.close)srcBmp.close();srcBmp=null;crop=null}
-function clampCrop(){
-  const cv=$('#cropCv');
-  crop.w=Math.max(MINS,Math.min(crop.w,cv.width));crop.h=Math.max(MINS,Math.min(crop.h,cv.height));
-  crop.x=Math.max(0,Math.min(crop.x,cv.width-crop.w));crop.y=Math.max(0,Math.min(crop.y,cv.height-crop.h));
-}
-function syncSliders(){if(crop){$('#cropW').value=Math.round(crop.w);$('#cropH').value=Math.round(crop.h)}}
-function drawCrop(){
-  const cv=$('#cropCv'),x=cv.getContext('2d');
-  x.drawImage(srcBmp,0,0,cv.width,cv.height);
-  if(crop&&crop.w>0&&crop.h>0){
-    x.fillStyle='rgba(0,0,0,.55)';
-    x.fillRect(0,0,cv.width,crop.y);
-    x.fillRect(0,crop.y+crop.h,cv.width,cv.height-crop.y-crop.h);
-    x.fillRect(0,crop.y,crop.x,crop.h);
-    x.fillRect(crop.x+crop.w,crop.y,cv.width-crop.x-crop.w,crop.h);
-    x.strokeStyle='#4da3ff';x.lineWidth=3;x.strokeRect(crop.x,crop.y,crop.w,crop.h);
-    x.fillStyle='#4da3ff';
-    [[0,0],[.5,0],[1,0],[0,.5],[1,.5],[0,1],[.5,1],[1,1]].forEach(([a,b])=>x.fillRect(crop.x+crop.w*a-6,crop.y+crop.h*b-6,12,12));
+/* ---- Tesseract: один воркер, смена языков по очереди, языки кешируются браузером ---- */
+let ocrWorker=null, ocrLangs='', ocrChain=Promise.resolve(), ocrProg=null;
+function ocrLog(m){
+  if(!m)return;
+  if(m.status==='recognizing text'){ocrProg&&ocrProg(m.progress||0);return}
+  if(/loading/.test(m.status||'')&&!busy&&$('#scanModal').classList.contains('on')){
+    const p=m.progress?Math.round(m.progress*100):0;
+    if(p<100)scStatus('Загрузка языков распознавания…');
   }
-  if(!prevQueued){prevQueued=true;requestAnimationFrame(()=>{prevQueued=false;drawPreview()})}
 }
-function drawPreview(){
-  const pv=$('#cropPrev'),px=pv.getContext('2d');
-  if(!srcBmp||!crop||crop.w<MINS||crop.h<MINS){pv.width=1;pv.height=1;pv.classList.add('hide');return}
-  pv.classList.remove('hide');
-  const r=+$('#cropCv').dataset.r, sx=crop.x/r, sy=crop.y/r, sw=crop.w/r, sh=crop.h/r;
-  const sc=Math.min(Math.min(360,window.innerWidth-40)/sw,140/sh,2);
-  pv.width=Math.max(1,Math.round(sw*sc));pv.height=Math.max(1,Math.round(sh*sc));
-  px.drawImage(srcBmp,sx,sy,sw,sh,0,0,pv.width,pv.height);
-  preprocess(pv,$('#bw').checked);
-}
-function cvPos(ev){
-  const cv=$('#cropCv'),b=cv.getBoundingClientRect();
-  return{x:Math.max(0,Math.min(b.width,ev.clientX-b.left))*cv.width/b.width,
-         y:Math.max(0,Math.min(b.height,ev.clientY-b.top))*cv.height/b.height};
-}
-function hitCrop(p){
-  if(!crop||crop.w<=0)return 'create';
-  const {x,y,w,h}=crop, near=(a,b)=>Math.abs(a-b)<=HIT;
-  const inX=p.x>x-HIT&&p.x<x+w+HIT, inY=p.y>y-HIT&&p.y<y+h+HIT;
-  if(!(inX&&inY))return 'create';
-  const L=near(p.x,x),R=near(p.x,x+w),T=near(p.y,y),B=near(p.y,y+h);
-  const ns=T?'n':(B?'s':''), ew=L?'w':(R?'e':'');
-  if(ns||ew)return ns+ew;
-  return 'move';
-}
-const CURS={nw:'nwse-resize',se:'nwse-resize',ne:'nesw-resize',sw:'nesw-resize',n:'ns-resize',s:'ns-resize',e:'ew-resize',w:'ew-resize',move:'move',create:'crosshair'};
-(()=>{
-  const cv=$('#cropCv');
-  cv.onpointerdown=ev=>{
-    ev.preventDefault();cv.setPointerCapture(ev.pointerId);
-    const p=cvPos(ev);cropStart=p;cropMode=hitCrop(p);cropOrig=crop?{...crop}:null;
-    if(cropMode==='create')crop={x:p.x,y:p.y,w:0,h:0};
-    drawCrop();
-  };
-  cv.onpointermove=ev=>{
-    const p=cvPos(ev);
-    if(!cropMode){cv.style.cursor=CURS[hitCrop(p)]||'crosshair';return}
-    const dx=p.x-cropStart.x, dy=p.y-cropStart.y;
-    if(cropMode==='create'){crop={x:Math.min(p.x,cropStart.x),y:Math.min(p.y,cropStart.y),w:Math.abs(dx),h:Math.abs(dy)}}
-    else if(cropMode==='move'){crop={...cropOrig,x:cropOrig.x+dx,y:cropOrig.y+dy};clampCrop()}
-    else{
-      let {x,y,w,h}=cropOrig;
-      if(cropMode.includes('w')){x+=dx;w-=dx}
-      if(cropMode.includes('e')){w+=dx}
-      if(cropMode.includes('n')){y+=dy;h-=dy}
-      if(cropMode.includes('s')){h+=dy}
-      if(w<MINS){if(cropMode.includes('w'))x-=MINS-w;w=MINS}
-      if(h<MINS){if(cropMode.includes('n'))y-=MINS-h;h=MINS}
-      crop={x,y,w,h};clampCrop();
+function ensureOcr(langs){
+  const run=async()=>{
+    if(ocrWorker&&ocrLangs===langs)return ocrWorker;
+    await ensureLibrary('Tesseract','https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
+    if(ocrWorker){
+      try{await ocrWorker.reinitialize(langs.split('+'),1);ocrLangs=langs;return ocrWorker}
+      catch(e){try{await ocrWorker.terminate()}catch(_){}ocrWorker=null;ocrLangs=''}
     }
-    syncSliders();drawCrop();
+    ocrWorker=await Tesseract.createWorker(langs.split('+'),1,{logger:ocrLog});
+    ocrLangs=langs;return ocrWorker;
   };
-  cv.onpointerup=cv.onpointercancel=()=>{
-    cropMode=null;
-    if(crop&&(crop.w<MINS||crop.h<MINS)){crop=null;drawCrop()}   // простое касание без выделения
-    syncSliders();
-  };
-})();
-function sliderResize(dim){
-  const cv=$('#cropCv');
-  if(!crop){crop={x:cv.width*.2,y:cv.height*.375,w:cv.width*.6,h:cv.height*.25}}
-  crop[dim]=+(dim==='w'?$('#cropW'):$('#cropH')).value;
-  clampCrop();syncSliders();drawCrop();
+  const p=ocrChain.then(run,run);ocrChain=p.catch(()=>{});return p;
 }
-$('#cropW').oninput=()=>sliderResize('w');
-$('#cropH').oninput=()=>sliderResize('h');
-$('#bw').onchange=()=>{if(srcBmp)drawCrop()};
-document.addEventListener('click',e=>{
-  if(e.target.id==='addDeviceType')dictAdd('types');
-  if(e.target.id==='removeDeviceType')openDictModal('types');
-});
-$('#cropCancel').onclick=closeCrop;
-$('#cropGo').onclick=()=>runOcr(true);
-$('#cropAll').onclick=()=>{crop=null;drawCrop();runOcr(false)};
+function scWarm(){
+  if(busy)return;const langs=scLangs();
+  if(ocrWorker&&ocrLangs===langs){scStatus('Готово к распознаванию · '+scLangHuman(),'ok');return}
+  scStatus('Подготовка распознавания ('+scLangHuman()+')…');
+  ensureOcr(langs).then(()=>{if(!busy&&$('#scanModal').classList.contains('on')&&scLangs()===langs)scStatus('Готово к распознаванию · '+scLangHuman(),'ok')})
+    .catch(()=>{if(!busy)scStatus('Нет связи: при первом запуске нужен интернет для загрузки языков','bad')});
+}
+const scLangHuman=()=>SC_ALPHA[scAlpha()].l+(scLangs().startsWith('kaz')?' + KZ':'');
 
-function otsu(g){
-  const h=new Array(256).fill(0);for(let i=0;i<g.length;i++)h[g[i]]++;
-  const tot=g.length;let sum=0;for(let i=0;i<256;i++)sum+=i*h[i];
-  let sB=0,wB=0,max=0,th=127;
-  for(let i=0;i<256;i++){wB+=h[i];if(!wB)continue;const wF=tot-wB;if(!wF)break;sB+=i*h[i];
-    const mB=sB/wB,mF=(sum-sB)/wF,v=wB*wF*(mB-mF)*(mB-mF);if(v>max){max=v;th=i}}
-  return th;
+/* ---- открыть фото ---- */
+function startScan(k){scanField=k;scPick()}
+function scPick(){
+  if(matchMedia('(pointer:coarse)').matches){$('#scSrc').classList.add('on');setTimeout(()=>$('#scCam').focus(),50)}
+  else{$('#photoGal').value='';$('#photoGal').click()}
 }
-function preprocess(cv,bw){
-  const x=cv.getContext('2d'),id=x.getImageData(0,0,cv.width,cv.height),d=id.data,n=cv.width*cv.height;
-  const g=new Uint8Array(n),hist=new Uint32Array(256);
-  for(let i=0;i<n;i++){const v=(d[i*4]*.299+d[i*4+1]*.587+d[i*4+2]*.114)|0;g[i]=v;hist[v]++}
-  let lo=0,hi=255,c=0;
-  for(lo=0;lo<255&&(c+=hist[lo])<n*.01;lo++);
-  c=0;for(hi=255;hi>0&&(c+=hist[hi])<n*.01;hi--);
-  if(hi-lo<20){lo=0;hi=255}
-  let sum=0;
-  for(let i=0;i<n;i++){let v=(g[i]-lo)*255/(hi-lo);v=v<0?0:v>255?255:v;g[i]=v;sum+=v}
-  const invert=sum/n<110;
-  if(bw){const th=otsu(g);for(let i=0;i<n;i++)g[i]=g[i]>th?255:0}
-  for(let i=0;i<n;i++){const v=invert?255-g[i]:g[i];d[i*4]=d[i*4+1]=d[i*4+2]=v;d[i*4+3]=255}
-  x.putImageData(id,0,0);
+$('#scCam').onclick=()=>{$('#scSrc').classList.remove('on');$('#photo').value='';$('#photo').click()};
+$('#scGal').onclick=()=>{$('#scSrc').classList.remove('on');$('#photoGal').value='';$('#photoGal').click()};
+$('#scSrcX').onclick=()=>$('#scSrc').classList.remove('on');
+$('#scSrc').addEventListener('click',e=>{if(e.target.id==='scSrc')$('#scSrc').classList.remove('on')});
+$('#photo').onchange=$('#photoGal').onchange=e=>{const f=e.target.files&&e.target.files[0];e.target.value='';if(f)scLoad(f)};
+function scImg(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),i=new Image();i.onload=()=>{URL.revokeObjectURL(u);ok(i)};i.onerror=()=>{URL.revokeObjectURL(u);no(new Error('img'))};i.src=u})}
+async function scLoad(file){
+  let bmp=null;
+  try{bmp=await createImageBitmap(file,{imageOrientation:'from-image'})}catch(e){try{bmp=await scImg(file)}catch(e2){toast('Не удалось открыть фото. Попробуйте JPG или PNG');return}}
+  const w=bmp.naturalWidth||bmp.width,h=bmp.naturalHeight||bmp.height,MAX=3000,k=Math.min(1,MAX/Math.max(w,h));
+  const c=SC.src||(SC.src=document.createElement('canvas'));
+  c.width=Math.max(1,Math.round(w*k));c.height=Math.max(1,Math.round(h*k));
+  const x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(bmp,0,0,c.width,c.height);
+  if(bmp.close)bmp.close();
+  scOpen();
 }
-// Штрихкоды: встроенный BarcodeDetector (Chrome/Android), запасной вариант — ZXing. Если не получилось — тихо идём дальше к тексту.
+function scOpen(){
+  const m=$('#scanModal'),wasOpen=m.classList.contains('on');
+  SC.rot=0;SC.fine=0;SC.enh={...SC_ENH0};SC.res=null;
+  $('#scRes').hidden=true;m.classList.add('on');document.documentElement.classList.add('sc-lock');
+  if(!wasOpen&&!SC.pushed){try{history.pushState({scan:1},'');SC.pushed=true}catch(e){}}
+  $('#scSub').textContent='Поле: '+scFieldLabel(scanField);
+  scSyncUI();scBuild();scSize();scFit();
+  scPreset(NUMF[scanField]?'line':'block',true);
+  $('#scHint').classList.remove('off');clearTimeout(SC.hintT);SC.hintT=setTimeout(()=>$('#scHint').classList.add('off'),4500);
+  scWarm();setTimeout(()=>$('#scGo').focus({preventScroll:true}),60);
+}
+function scClose(fromPop){
+  const m=$('#scanModal');if(!m.classList.contains('on'))return;
+  m.classList.remove('on','busy');document.documentElement.classList.remove('sc-lock');$('#scScanBox').hidden=true;
+  if(SC.res)scToForm(SC.res);
+  [SC.src,SC.work].forEach(c=>{if(c){c.width=c.height=1}});SC.crop=null;SC.res=null;$('#scThumb').innerHTML='';$('#scText').value='';
+  if(SC.pushed){SC.pushed=false;if(!fromPop){try{history.back()}catch(e){}}}
+}
+window.addEventListener('popstate',()=>{if($('#scanModal').classList.contains('on')){SC.pushed=false;if(!$('#scRes').hidden&&!busy){scShowEditor();try{history.pushState({scan:1},'');SC.pushed=true}catch(e){}}else scClose(true)}});
+$('#scClose').onclick=()=>scClose();
+$('#scRetake').onclick=()=>scPick();
+function scEsc(){if(!$('#scRes').hidden)scShowEditor();else scClose()}
+
+/* ---- рабочее изображение с поворотом ---- */
+function scBuild(){
+  const s=SC.src,q=((SC.rot%4)+4)%4,a=(q*90+SC.fine)*Math.PI/180,co=Math.abs(Math.cos(a)),si=Math.abs(Math.sin(a));
+  const W=Math.max(1,Math.round(s.width*co+s.height*si)),H=Math.max(1,Math.round(s.width*si+s.height*co));
+  const w=SC.work||(SC.work=document.createElement('canvas'));w.width=W;w.height=H;
+  const x=w.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,H);x.translate(W/2,H/2);x.rotate(a);x.imageSmoothingQuality='high';x.drawImage(s,-s.width/2,-s.height/2);x.setTransform(1,0,0,1,0,0);
+}
+function scRel(){const W=SC.work.width,H=SC.work.height,c=SC.crop;return c?{x:c.x/W,y:c.y/H,w:c.w/W,h:c.h/H}:null}
+function scFromRel(r){if(!r)return;const W=SC.work.width,H=SC.work.height;SC.crop={x:r.x*W,y:r.y*H,w:r.w*W,h:r.h*H};scClampCrop()}
+function scRotate(dir){
+  if(busy)return;let r=scRel();SC.rot+=dir;
+  if(r)r=dir>0?{x:1-(r.y+r.h),y:r.x,w:r.h,h:r.w}:{x:r.y,y:1-(r.x+r.w),w:r.h,h:r.w};
+  scBuild();scFit();scFromRel(r);scDraw();scPreview();scVibe();
+}
+$('#scRotL').onclick=()=>scRotate(-1);$('#scRotR').onclick=()=>scRotate(1);
+$('#scRot0').onclick=()=>{if(busy)return;SC.rot=0;SC.fine=0;$('#scFine').value=0;$('#scFineV').textContent='0°';scBuild();scFit();scPreset(SC.preset||(NUMF[scanField]?'line':'block'),true)};
+let scFineRaf=0;
+$('#scFine').oninput=e=>{SC.fine=+e.target.value;$('#scFineV').textContent=(SC.fine>0?'+':'')+SC.fine+'°';
+  if(scFineRaf)return;scFineRaf=requestAnimationFrame(()=>{scFineRaf=0;const r=scRel();const z=SC.v.zoom;scBuild();scFit();if(z>1.01)scZoomTo(SC.vw/2,SC.vh/2,z);scFromRel(r);scDraw();scPreview()})};
+
+/* ---- вид: масштаб и сдвиг ---- */
+function scSize(){
+  const r=$('#scStage').getBoundingClientRect(),cv=$('#scCv');SC.dpr=Math.min(2,window.devicePixelRatio||1);
+  SC.vw=Math.max(1,r.width);SC.vh=Math.max(1,r.height);cv.width=Math.round(SC.vw*SC.dpr);cv.height=Math.round(SC.vh*SC.dpr);
+}
+function scFit(){
+  const W=SC.work.width,H=SC.work.height,pad=18,f=Math.max(.01,Math.min((SC.vw-pad*2)/W,(SC.vh-pad*2)/H));
+  Object.assign(SC.v,{fit:f,zoom:1,s:f,ox:(SC.vw-W*f)/2,oy:(SC.vh-H*f)/2});scZoomLbl();scDraw();
+}
+function scClampView(){
+  const v=SC.v,W=SC.work.width*v.s,H=SC.work.height*v.s,m=40;
+  v.ox=W+2*m<=SC.vw?(SC.vw-W)/2:Math.min(m,Math.max(SC.vw-W-m,v.ox));
+  v.oy=H+2*m<=SC.vh?(SC.vh-H)/2:Math.min(m,Math.max(SC.vh-H-m,v.oy));
+}
+function scZoomTo(px,py,z){
+  const v=SC.v;z=Math.max(1,Math.min(10,z));const ix=(px-v.ox)/v.s,iy=(py-v.oy)/v.s;
+  v.zoom=z;v.s=v.fit*z;v.ox=px-ix*v.s;v.oy=py-iy*v.s;scClampView();scZoomLbl();scDraw();
+}
+const scZoomLbl=()=>{$('#scZoomV').textContent=Math.round(SC.v.zoom*100)+'%'};
+$('#scZoomIn').onclick=()=>scZoomTo(SC.vw/2,SC.vh/2,SC.v.zoom*1.5);
+$('#scZoomOut').onclick=()=>scZoomTo(SC.vw/2,SC.vh/2,SC.v.zoom/1.5);
+$('#scFitBtn').onclick=()=>scFit();
+const scToImg=p=>({x:(p.x-SC.v.ox)/SC.v.s,y:(p.y-SC.v.oy)/SC.v.s});
+function scScr(){const c=SC.crop,v=SC.v;return c?{x:v.ox+c.x*v.s,y:v.oy+c.y*v.s,w:c.w*v.s,h:c.h*v.s}:null}
+function scClampCrop(){
+  const c=SC.crop;if(!c)return;const W=SC.work.width,H=SC.work.height,mn=8;
+  c.w=Math.max(mn,Math.min(c.w,W));c.h=Math.max(mn,Math.min(c.h,H));c.x=Math.max(0,Math.min(c.x,W-c.w));c.y=Math.max(0,Math.min(c.y,H-c.h));
+}
+/* ---- отрисовка: только по requestAnimationFrame ---- */
+function scDraw(){if(!SC.raf)SC.raf=requestAnimationFrame(()=>{SC.raf=0;scPaint()})}
+function scPaint(){
+  if(!SC.work)return;
+  const cv=$('#scCv'),x=cv.getContext('2d'),v=SC.v;
+  x.setTransform(SC.dpr,0,0,SC.dpr,0,0);x.clearRect(0,0,SC.vw,SC.vh);x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';
+  x.drawImage(SC.work,v.ox,v.oy,SC.work.width*v.s,SC.work.height*v.s);
+  const r=scScr();if(!r)return;
+  x.fillStyle='rgba(0,0,0,.58)';x.beginPath();x.rect(0,0,SC.vw,SC.vh);x.rect(r.x,r.y,r.w,r.h);x.fill('evenodd');
+  x.strokeStyle='rgba(255,255,255,.85)';x.lineWidth=1;x.strokeRect(r.x+.5,r.y+.5,r.w-1,r.h-1);
+  const d=SC.drag;
+  if(d&&d.mode!=='pan'&&d.mode!=='pinch'){x.strokeStyle='rgba(255,255,255,.35)';x.beginPath();for(let i=1;i<3;i++){x.moveTo(r.x+r.w*i/3,r.y);x.lineTo(r.x+r.w*i/3,r.y+r.h);x.moveTo(r.x,r.y+r.h*i/3);x.lineTo(r.x+r.w,r.y+r.h*i/3)}x.stroke()}
+  const L=Math.max(8,Math.min(24,r.w/3,r.h/3));x.strokeStyle='#fff';x.lineWidth=4;x.lineCap='round';x.beginPath();
+  [[r.x,r.y,1,1],[r.x+r.w,r.y,-1,1],[r.x,r.y+r.h,1,-1],[r.x+r.w,r.y+r.h,-1,-1]].forEach(([a,b,sx,sy])=>{x.moveTo(a+sx*L,b);x.lineTo(a,b);x.lineTo(a,b+sy*L)});
+  if(r.w>70){const mx=r.x+r.w/2;x.moveTo(mx-10,r.y);x.lineTo(mx+10,r.y);x.moveTo(mx-10,r.y+r.h);x.lineTo(mx+10,r.y+r.h)}
+  if(r.h>70){const my=r.y+r.h/2;x.moveTo(r.x,my-10);x.lineTo(r.x,my+10);x.moveTo(r.x+r.w,my-10);x.lineTo(r.x+r.w,my+10)}
+  x.stroke();
+  if(!$('#scScanBox').hidden)scPlaceScanBox();
+}
+function scPlaceScanBox(){const r=scScr(),b=$('#scScanBox');if(!r)return;Object.assign(b.style,{left:r.x+'px',top:r.y+'px',width:r.w+'px',height:r.h+'px'})}
+
+/* ---- жесты: рамка, сдвиг, щипок, колесо, двойное касание ---- */
+function scHit(p){
+  const r=scScr();if(!r)return'out';const t=SC.touch?26:12;
+  if(p.x<r.x-t||p.x>r.x+r.w+t||p.y<r.y-t||p.y>r.y+r.h+t)return'out';
+  const nT=Math.abs(p.y-r.y)<=t,nB=Math.abs(p.y-(r.y+r.h))<=t,nL=Math.abs(p.x-r.x)<=t,nR=Math.abs(p.x-(r.x+r.w))<=t;
+  const ns=nT&&nB?(p.y<r.y+r.h/2?'n':'s'):nT?'n':nB?'s':'';
+  const ew=nL&&nR?(p.x<r.x+r.w/2?'w':'e'):nL?'w':nR?'e':'';
+  if(ns||ew)return ns+ew;
+  return(p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h)?'move':'out';
+}
+const SC_CURS={nw:'nwse-resize',se:'nwse-resize',ne:'nesw-resize',sw:'nesw-resize',n:'ns-resize',s:'ns-resize',e:'ew-resize',w:'ew-resize',move:'move',out:'crosshair'};
+(()=>{
+  const cv=$('#scCv'),pt=e=>{const b=cv.getBoundingClientRect();return{x:e.clientX-b.left,y:e.clientY-b.top}};
+  const two=()=>{const[a,b]=[...SC.ptrs.values()];return{d:Math.hypot(a.x-b.x,a.y-b.y)||1,m:{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}};
+  cv.addEventListener('pointerdown',e=>{
+    if(busy)return;e.preventDefault();try{cv.setPointerCapture(e.pointerId)}catch(_){}
+    SC.touch=e.pointerType!=='mouse';SC.ptrs.set(e.pointerId,pt(e));$('#scHint').classList.add('off');
+    if(SC.ptrs.size===2){const t=two();SC.drag={mode:'pinch',d0:t.d,z0:SC.v.zoom,i0:scToImg(t.m),c0:SC.drag&&SC.drag.c0};if(SC.drag.c0)SC.crop={...SC.drag.c0};scDraw();return}
+    if(SC.ptrs.size>2)return;
+    const p=pt(e),h=scHit(p),mode=h==='out'?(SC.v.zoom>1.01?'pan':'create'):h;
+    SC.drag={mode,p0:p,ip0:scToImg(p),c0:SC.crop?{...SC.crop}:null,ox0:SC.v.ox,oy0:SC.v.oy,t0:performance.now(),moved:false};scDraw();
+  });
+  cv.addEventListener('pointermove',e=>{
+    const p=pt(e);
+    if(!SC.ptrs.has(e.pointerId)){if(e.pointerType==='mouse')cv.style.cursor=SC_CURS[scHit(p)];return}
+    SC.ptrs.set(e.pointerId,p);const d=SC.drag;if(!d||d.mode==='none')return;
+    if(d.mode==='pinch'){if(SC.ptrs.size<2)return;const t=two(),v=SC.v;v.zoom=Math.max(1,Math.min(10,d.z0*t.d/d.d0));v.s=v.fit*v.zoom;v.ox=t.m.x-d.i0.x*v.s;v.oy=t.m.y-d.i0.y*v.s;scClampView();scZoomLbl();scDraw();return}
+    if(Math.hypot(p.x-d.p0.x,p.y-d.p0.y)>4)d.moved=true;if(!d.moved)return;
+    const s=SC.v.s,dx=(p.x-d.p0.x)/s,dy=(p.y-d.p0.y)/s,mn=Math.max(8,30/s);
+    if(d.mode==='pan'){SC.v.ox=d.ox0+p.x-d.p0.x;SC.v.oy=d.oy0+p.y-d.p0.y;scClampView()}
+    else if(d.mode==='create'){const ip=scToImg(p),W=SC.work.width,H=SC.work.height,cl=(a,m)=>Math.max(0,Math.min(m,a));
+      const x1=cl(Math.min(ip.x,d.ip0.x),W),y1=cl(Math.min(ip.y,d.ip0.y),H),x2=cl(Math.max(ip.x,d.ip0.x),W),y2=cl(Math.max(ip.y,d.ip0.y),H);SC.crop={x:x1,y:y1,w:x2-x1,h:y2-y1}}
+    else if(d.mode==='move'){SC.crop={...d.c0,x:d.c0.x+dx,y:d.c0.y+dy};scClampCrop()}
+    else{let{x,y,w,h}=d.c0;const W=SC.work.width,H=SC.work.height;
+      if(d.mode.includes('w')){const nx=Math.max(0,Math.min(x+w-mn,x+dx));w+=x-nx;x=nx}
+      if(d.mode.includes('e'))w=Math.max(mn,Math.min(W-x,w+dx));
+      if(d.mode.includes('n')){const ny=Math.max(0,Math.min(y+h-mn,y+dy));h+=y-ny;y=ny}
+      if(d.mode.includes('s'))h=Math.max(mn,Math.min(H-y,h+dy));
+      SC.crop={x,y,w,h}}
+    if(d.mode!=='pan'){SC.preset=null;scMarkSeg('preset',null)}
+    scDraw();scPreview();
+  });
+  const up=e=>{
+    if(!SC.ptrs.has(e.pointerId))return;const p=pt(e);SC.ptrs.delete(e.pointerId);const d=SC.drag;
+    if(!d)return;if(d.mode==='pinch'){if(SC.ptrs.size===0)SC.drag=null;else SC.drag={mode:'none'};scDraw();return}
+    if(SC.ptrs.size)return;SC.drag=null;
+    if(d.mode==='create'&&(!SC.crop||SC.crop.w*SC.v.s<20||SC.crop.h*SC.v.s<14))SC.crop=d.c0;
+    if(!d.moved&&e.type==='pointerup'&&e.pointerType!=='mouse'){const now=performance.now(),lt=SC.lastTap;
+      if(lt&&now-lt.t<320&&Math.hypot(p.x-lt.x,p.y-lt.y)<30){SC.lastTap=null;SC.v.zoom>1.2?scFit():scZoomTo(p.x,p.y,2.5)}else SC.lastTap={t:now,x:p.x,y:p.y}}
+    scDraw();scPreview();
+  };
+  cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+  cv.addEventListener('dblclick',e=>{const p=pt(e);SC.v.zoom>1.2?scFit():scZoomTo(p.x,p.y,2.5)});
+  cv.addEventListener('wheel',e=>{if(busy)return;e.preventDefault();const p=pt(e);scZoomTo(p.x,p.y,SC.v.zoom*Math.exp(-e.deltaY*.0018))},{passive:false});
+  let rt=0;window.addEventListener('resize',()=>{if(!$('#scanModal').classList.contains('on')||!SC.work)return;cancelAnimationFrame(rt);rt=requestAnimationFrame(()=>{const z=SC.v.zoom;scSize();scFit();if(z>1.01)scZoomTo(SC.vw/2,SC.vh/2,z)})});
+})();
+
+/* ---- готовые рамки ---- */
+function scPreset(kind,silent){
+  if(!SC.work)return;const W=SC.work.width,H=SC.work.height,v=SC.v;
+  if(kind==='all')SC.crop={x:0,y:0,w:W,h:H};
+  else{
+    const vx=Math.max(0,-v.ox/v.s),vy=Math.max(0,-v.oy/v.s),vw=Math.min(W,SC.vw/v.s)-0,vh=Math.min(H,SC.vh/v.s);
+    const cfg={line:[.86,.14],block:[.88,.4],label:[.94,.72]}[kind]||[.86,.4];
+    const w=Math.min(vw,W)*cfg[0];let h=Math.min(vh,H)*cfg[1];if(kind==='line')h=Math.max(Math.min(h,w/3.2),w/12);
+    SC.crop={x:vx+(Math.min(vw,W)-w)/2,y:vy+(Math.min(vh,H)-h)/2,w,h};scClampCrop();
+  }
+  SC.preset=kind;scMarkSeg('preset',kind);scDraw();scPreview();if(!silent)scVibe();
+}
+
+/* ---- обработка изображения ---- */
+function scOtsu(g){const h=new Uint32Array(256);for(let i=0;i<g.length;i++)h[g[i]]++;let sum=0;for(let i=0;i<256;i++)sum+=i*h[i];
+  let sB=0,wB=0,max=0,th=127;const tot=g.length;for(let i=0;i<256;i++){wB+=h[i];if(!wB)continue;const wF=tot-wB;if(!wF)break;sB+=i*h[i];const mB=sB/wB,mF=(sum-sB)/wF,vv=wB*wF*(mB-mF)*(mB-mF);if(vv>max){max=vv;th=i}}return th}
+function scBradley(g,W,H){ // адаптивный порог: справляется с тенями и бликами
+  const I=new Uint32Array((W+1)*(H+1)),s=Math.max(9,Math.round(Math.max(W,H)/10)|1),hs=s>>1,t=.13;
+  for(let y=0;y<H;y++){let row=0;for(let x=0;x<W;x++){row+=g[y*W+x];I[(y+1)*(W+1)+x+1]=I[y*(W+1)+x+1]+row}}
+  const o=new Uint8ClampedArray(W*H);
+  for(let y=0;y<H;y++){const y1=Math.max(0,y-hs),y2=Math.min(H-1,y+hs);for(let x=0;x<W;x++){const x1=Math.max(0,x-hs),x2=Math.min(W-1,x+hs),cnt=(x2-x1+1)*(y2-y1+1);
+    const sum=I[(y2+1)*(W+1)+x2+1]-I[y1*(W+1)+x2+1]-I[(y2+1)*(W+1)+x1]+I[y1*(W+1)+x1];o[y*W+x]=g[y*W+x]*cnt<=sum*(1-t)?0:255}}
+  return o;
+}
+function scProcess(cv,o){
+  const x=cv.getContext('2d',{willReadFrequently:true}),W=cv.width,H=cv.height,id=x.getImageData(0,0,W,H),d=id.data,n=W*H;
+  let g=new Uint8ClampedArray(n),sum=0;
+  for(let i=0,j=0;i<n;i++,j+=4){const v=(d[j]*77+d[j+1]*150+d[j+2]*29)>>8;g[i]=v;sum+=v}
+  const inv=o.inv==='light'||(o.inv==='auto'&&sum/n<105);
+  if(inv)for(let i=0;i<n;i++)g[i]=255-g[i];
+  if(o.auto){const h=new Uint32Array(256);for(let i=0;i<n;i++)h[g[i]]++;let lo=0,hi=255,c=0;for(lo=0;lo<255&&(c+=h[lo])<n*.005;lo++);c=0;for(hi=255;hi>0&&(c+=h[hi])<n*.005;hi--);
+    if(hi-lo>=16){const k=255/(hi-lo);for(let i=0;i<n;i++)g[i]=(g[i]-lo)*k}}
+  if(o.bright||o.contrast){const C=o.contrast*2.55,f=(259*(C+255))/(255*(259-C)),b=o.bright*2.2;for(let i=0;i<n;i++)g[i]=f*(g[i]-128)+128+b}
+  if(o.sharp>0&&W>2&&H>2){const a=o.sharp/100*1.6,src=g.slice();
+    for(let y=1;y<H-1;y++){const r=y*W;for(let xx=1;xx<W-1;xx++){const i=r+xx,bl=(src[i-W-1]+src[i-W]+src[i-W+1]+src[i-1]+src[i]+src[i+1]+src[i+W-1]+src[i+W]+src[i+W+1])/9;g[i]=src[i]+a*(src[i]-bl)}}}
+  if(o.bin==='otsu'){const th=scOtsu(g);for(let i=0;i<n;i++)g[i]=g[i]>th?255:0}
+  else if(o.bin==='adapt')g=scBradley(g,W,H);
+  for(let i=0,j=0;i<n;i++,j+=4){d[j]=d[j+1]=d[j+2]=g[i];d[j+3]=255}
+  x.putImageData(id,0,0);return cv;
+}
+function scSkew(cv){ // наклон строк по проекциям (±15°), градусы для canvas.rotate
+  const k=Math.min(1,640/Math.max(cv.width,cv.height)),w=Math.max(8,Math.round(cv.width*k)),h=Math.max(8,Math.round(cv.height*k));
+  const t=document.createElement('canvas');t.width=w;t.height=h;t.getContext('2d',{willReadFrequently:true}).drawImage(cv,0,0,w,h);
+  scProcess(t,{auto:true,bright:0,contrast:0,sharp:0,inv:SC.enh.inv,bin:'adapt'});
+  const d=t.getContext('2d').getImageData(0,0,w,h).data,xs=[],ys=[];t.width=t.height=1;
+  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++)if(d[(y*w+x)*4]<128){xs.push(x-w/2);ys.push(y-h/2)}
+  if(xs.length<60||xs.length>w*h*.45)return 0;
+  const R=Math.ceil(Math.hypot(w,h)),bins=new Float64Array(2*R+2);
+  const score=a=>{const r=a*Math.PI/180,sn=Math.sin(r),cs=Math.cos(r);bins.fill(0);for(let i=0;i<xs.length;i++)bins[(xs[i]*sn+ys[i]*cs+R)|0]++;let q=0;for(let i=0;i<bins.length;i++)q+=bins[i]*bins[i];return q};
+  let best=0,bs=score(0);const s0=bs;
+  for(let a=-15;a<=15;a+=1){if(!a)continue;const q=score(a);if(q>bs){bs=q;best=a}}
+  for(let a=best-.75;a<=best+.75;a+=.25){const q=score(a);if(q>bs){bs=q;best=a}}
+  return Math.abs(best)>=.5&&bs>s0*1.04?best:0;
+}
+function scRotCanvas(cv,deg){if(!deg)return cv;const r=deg*Math.PI/180,co=Math.abs(Math.cos(r)),si=Math.abs(Math.sin(r)),W=Math.round(cv.width*co+cv.height*si),H=Math.round(cv.width*si+cv.height*co);
+  const o=document.createElement('canvas');o.width=W;o.height=H;const x=o.getContext('2d',{willReadFrequently:true});x.fillStyle='#fff';x.fillRect(0,0,W,H);x.translate(W/2,H/2);x.rotate(r);x.imageSmoothingQuality='high';x.drawImage(cv,-cv.width/2,-cv.height/2);cv.width=cv.height=1;return o}
+const scOpts=bin=>({...SC.enh,bin:bin===undefined?scPrefs.bin:bin});
+function scRegion(){const c=SC.crop;return c&&c.w>=8&&c.h>=8?c:{x:0,y:0,w:SC.work.width,h:SC.work.height}}
+function scCut(c,k){const cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(c.w*k));cv.height=Math.max(1,Math.round(c.h*k));
+  const x=cv.getContext('2d',{willReadFrequently:true});x.imageSmoothingQuality='high';x.drawImage(SC.work,c.x,c.y,c.w,c.h,0,0,cv.width,cv.height);return cv}
+function scPreview(){if(!SC.praf)SC.praf=requestAnimationFrame(()=>{SC.praf=0;if(!SC.work)return;const c=scRegion(),k=Math.min(1,560/c.w,150/c.h,3);
+  const t=scCut(c,Math.max(k,.02)),pv=$('#scPrev');scProcess(t,scOpts());pv.width=t.width;pv.height=t.height;pv.getContext('2d').drawImage(t,0,0);t.width=t.height=1})}
+function scPsm(c){if(scPrefs.psm!=='auto')return scPrefs.psm;const ar=c.w/c.h;if(ar>=3.2)return'7';if(SC.preset==='all')return'3';return'6'}
+function scScale(c,psm){if(psm==='7')return Math.max(.3,Math.min(4,96/c.h));const L=Math.max(c.w,c.h);return Math.max(.2,Math.min(3,L<1400?1600/L:L>2600?2600/L:1))}
+function scPad(cv){const p=Math.round(Math.max(16,Math.min(cv.width,cv.height)*.08)),o=document.createElement('canvas');o.width=cv.width+2*p;o.height=cv.height+2*p;
+  const x=o.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,o.width,o.height);x.drawImage(cv,p,p);cv.width=cv.height=1;return o}
+
+/* ---- исправление похожих букв: латиница ↔ кириллица ---- */
+const SC_C2L={'А':'A','В':'B','Е':'E','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','Х':'X','У':'Y','а':'a','е':'e','о':'o','р':'p','с':'c','у':'y','х':'x','і':'i','І':'I','ѕ':'s','ј':'j'};
+const SC_L2C=Object.fromEntries(Object.entries(SC_C2L).filter(([c])=>!/[іІѕј]/.test(c)).map(([c,l])=>[l,c]));
+function scFixWord(w,alpha){
+  const cy=(w.match(/[\u0400-\u04FF]/g)||[]).length,la=(w.match(/[A-Za-z]/g)||[]).length,dg=/\d/.test(w);
+  const lat=s=>s.replace(/[\u0400-\u04FF]/g,ch=>SC_C2L[ch]||ch),cyr=s=>s.replace(/[A-Za-z]/g,ch=>SC_L2C[ch]||ch);
+  const canLat=[...w].every(ch=>!/[\u0400-\u04FF]/.test(ch)||SC_C2L[ch]),canCyr=[...w].every(ch=>!/[A-Za-z]/.test(ch)||SC_L2C[ch]);
+  if(alpha==='lat'||alpha==='codes')return canLat?lat(w):w;
+  if(alpha==='cyr'&&!dg)return canCyr?cyr(w):w;
+  if(cy&&la){if((dg||la>=cy)&&canLat)return lat(w);if(canCyr)return cyr(w);return w}
+  if(cy&&dg&&NUMF[scanField]&&canLat)return lat(w); // «С123А» в серийном номере → «C123A»
+  return w;
+}
+const scToLat=w=>[...w].every(ch=>!/[\u0400-\u04FF]/.test(ch)||SC_C2L[ch])?w.replace(/[\u0400-\u04FF]/g,ch=>SC_C2L[ch]):w;
+function scLineFix(words){ // «НР LaserJet» → «HP LaserJet»: кириллица-двойник в латинской строке и известные бренды
+  const kind=w=>{const c=/[\u0400-\u04FF]/.test(w),l=/[A-Za-z]/.test(w);return c&&!l?'c':l&&!c?'l':''};
+  const lat=words.filter(w=>kind(w.t)==='l'&&w.t.length>1).length,cyr=words.filter(w=>kind(w.t)==='c'&&w.t.length>1).length;
+  words.forEach(w=>{if(kind(w.t)!=='c')return;const v=scToLat(w.t);if(v===w.t)return;if(lat>cyr||SC_BRANDS.some(b=>b.toLowerCase()===v.toLowerCase()))w.t=v});
+}
+const scClean=s=>String(s||'').replace(/[\u2014\u2013]/g,'-').replace(/[“”«»]/g,'"').replace(/\s+/g,' ').trim();
+
+/* ---- распознавание ---- */
+async function scRecognizeOnce(worker,cv,psm,wl,k,n){
+  await worker.setParameters({tessedit_pageseg_mode:psm,tessedit_char_whitelist:wl,preserve_interword_spaces:'1',user_defined_dpi:'300'});
+  ocrProg=p=>scProg((k+p)/n);
+  const {data}=await worker.recognize(cv);ocrProg=null;
+  const alpha=scAlpha(),lines=[];
+  (data.lines||[]).forEach(l=>{const words=(l.words||[]).map(w=>({t:scFixWord(scClean(w.text),alpha),c:Math.round(w.confidence||0)})).filter(w=>w.t);if(!words.length)return;scLineFix(words);const t=words.map(w=>w.t).join(' '),c=Math.round(words.reduce((a,w)=>a+w.c,0)/words.length),al=(t.match(/[\p{L}\p{N}]/gu)||[]).length;if(!al||(c<45&&al<5)||c<25)return;lines.push({words,t,c})});
+  if(!lines.length)scClean(data.text).split(/\n+/).filter(Boolean).forEach(t=>lines.push({words:[{t,c:Math.round(data.confidence||0)}],t,c:Math.round(data.confidence||0)}));
+  let wsum=0,csum=0;lines.forEach(l=>l.words.forEach(w=>{const len=(w.t.match(/[\p{L}\p{N}]/gu)||[]).length;wsum+=len;csum+=len*w.c}));
+  return{lines,conf:wsum?Math.round(csum/wsum):0,chars:wsum};
+}
+const scBetter=(a,b)=>{const pa=a.chars<2?-60:0,pb=b.chars<2?-60:0;const d=(a.conf+pa)-(b.conf+pb);return Math.abs(d)<=4?a.chars>b.chars:d>0};
+function scProg(p){$('#scGoP').style.transform='scaleX('+Math.max(0,Math.min(1,p)).toFixed(3)+')';$('#scGoT').textContent='Распознаю… '+Math.round(p*100)+'%'}
+async function scRun(){
+  if(busy||!SC.work)return;busy=true;const m=$('#scanModal');m.classList.add('busy');$('#scScanBox').hidden=false;scPlaceScanBox();scProg(0);scVibe();
+  const keep=[];
+  try{
+    const c=scRegion(),psm=scPsm(c),k=scScale(c,psm),alpha=scAlpha(),wl=SC_ALPHA[alpha].wl;
+    let codes=[];
+    if(scPrefs.barcode){scStatus('Ищу штрихкод и QR…');const bc=scCut(c,Math.min(2,Math.max(1,1000/Math.max(c.w,c.h))));codes=await readBarcodes(bc).catch(()=>[]);bc.width=bc.height=1}
+    scStatus('Загрузка языков ('+scLangHuman()+')…');
+    const worker=await ensureOcr(scLangs());
+    const bins=scPrefs.acc==='best'?[scPrefs.bin,scPrefs.bin==='off'?'adapt':'off']:[scPrefs.bin];
+    let base=scCut(c,k),skew=0;
+    if(scPrefs.deskew){skew=scSkew(base);if(skew){base=scRotCanvas(base,skew)}}
+    keep.push(base);
+    let best=null;
+    for(let i=0;i<bins.length;i++){
+      scStatus(bins.length>1?'Проход '+(i+1)+' из '+bins.length+'…':'Распознаю текст…');
+      const cp=document.createElement('canvas');cp.width=base.width;cp.height=base.height;cp.getContext('2d',{willReadFrequently:true}).drawImage(base,0,0);
+      const cv=scPad(scProcess(cp,scOpts(bins[i])));
+      const r=await scRecognizeOnce(worker,cv,psm,wl,i,bins.length);r.cv=cv;keep.push(cv);
+      if(!best||scBetter(r,best))best=r;
+      if(best.conf>=88&&best.chars>=3)break;
+    }
+    best.codes=codes;best.field=scanField;best.skew=skew;
+    scShowResult(best);
+  }catch(err){scStatus('Ошибка: '+(err&&err.message||err)+'. При первом запуске нужен интернет.','bad')}
+  finally{
+    busy=false;m.classList.remove('busy');$('#scScanBox').hidden=true;$('#scGoT').textContent='Распознать';$('#scGoP').style.transform='scaleX(0)';
+    keep.forEach(cv=>{if(!SC.res||SC.res.cv!==cv)cv.width=cv.height=1});
+  }
+}
+$('#scGo').onclick=scRun;
+// Штрихкоды: встроенный BarcodeDetector (Chrome/Android), запасной вариант — ZXing.
 async function readBarcodes(canvas){
   const out=[];
   try{if('BarcodeDetector' in window){const det=new BarcodeDetector();(await det.detect(canvas)).forEach(b=>b.rawValue&&out.push(b.rawValue))}}catch(e){}
   if(!out.length){try{await ensureLibrary('ZXing','https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js')}catch(e){}}
   if(!out.length&&window.ZXing){
-    try{
-      const hints=new Map();hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
+    try{const hints=new Map();hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
       const res=await new ZXing.BrowserMultiFormatReader(hints).decodeFromImageUrl(canvas.toDataURL('image/png'));
-      if(res&&res.getText)out.push(res.getText());
-    }catch(e){}
+      if(res&&res.getText)out.push(res.getText())}catch(e){}
   }
-  return [...new Set(out.map(x=>String(x).trim()).filter(Boolean))];
+  return[...new Set(out.map(x=>String(x).trim()).filter(Boolean))];
 }
-async function runOcr(useCrop){
-  if(busy||!srcBmp)return;busy=true;
-  const st=$('#cropSt');
-  try{
-    const r=+$('#cropCv').dataset.r;
-    let sx=0,sy=0,sw=srcBmp.width,sh=srcBmp.height;
-    if(useCrop&&crop&&crop.w>=MINS&&crop.h>=MINS){sx=crop.x/r;sy=crop.y/r;sw=crop.w/r;sh=crop.h/r}
-    else if(useCrop){toast('Сначала обведите рамкой нужную строку');busy=false;return}
-    const sc=Math.min(3,1800/sw);
-    const cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(sw*sc));cv.height=Math.max(1,Math.round(sh*sc));
-    cv.getContext('2d').drawImage(srcBmp,sx,sy,sw,sh,0,0,cv.width,cv.height);
-    st.textContent='Ищу штрихкод…';
-    const codes=await readBarcodes(cv);
-    if(codes.length){cv.width=cv.height=1;closeCrop();showCandidates('',codes);busy=false;return}
-    preprocess(cv,$('#bw').checked);
-    if(!worker){
-      st.textContent='Загрузка распознавания (первый раз ~10 сек)...';
-      await ensureLibrary('Tesseract','https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
-      worker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')$('#cropSt').textContent='Распознаю: '+Math.round(m.progress*100)+'%'}});
-    }
-    const num=NUMF[scanField];
-    await worker.setParameters({
-      tessedit_char_whitelist:num?'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/._':'',
-      tessedit_pageseg_mode:(cv.width/cv.height>4)?'7':'6',
-      preserve_interword_spaces:'1'
-    });
-    st.textContent='Распознаю текст...';
-    const {data}=await worker.recognize(cv);
-    let lines=(data.lines||[]).map(l=>(l.words||[]).filter(w=>w.confidence>50).map(w=>w.text).join(' ').trim()).filter(Boolean);
-    if(!lines.length)lines=(data.text||'').split(/\n+/);
-    cv.width=cv.height=1;
-    closeCrop();
-    showCandidates(lines.join('\n'),[]);
-  }catch(err){st.textContent='Ошибка: '+err.message+'. Нужен интернет при первом запуске.'}
-  busy=false;
+
+/* ---- разбор: «S/N: …», «Модель: …», бренды, кандидаты для поля ---- */
+const SC_LAB={
+  serial:'s\\s*[\\/|Il1]\\s*n|sn|ser(?:ial)?\\.?\\s*(?:no|nr|number|num|#)?|сер(?:ийный)?\\.?\\s*(?:номер|№|no)?|зав(?:одской)?\\.?\\s*(?:номер|№)?',
+  model:'model(?:\\s*(?:no|name|number|#))?|mod\\.|m\\s*\\/\\s*n|модель|мод\\.',
+  asset:'asset(?:\\s*(?:tag|no|number|#))?|inv(?:entory)?\\.?\\s*(?:no|number|#)?|инв(?:ентарный)?\\.?\\s*(?:номер|№|no)?',
+  maker:'manufacturer|manufactured\\s+by|made\\s+by|mfr|производитель|изготовитель'
+};
+const SC_VAL={serial:'[\\p{L}\\p{N}][\\p{L}\\p{N}\\-\\/._]{2,39}',asset:'[\\p{L}\\p{N}][\\p{L}\\p{N}\\-\\/._]{2,39}',model:'[\\p{L}\\p{N}][\\p{L}\\p{N}\\-\\/._ ]{1,39}',maker:'[\\p{L}][\\p{L}\\p{N}\\-&. ]{1,39}'};
+const SC_KEYS=Object.fromEntries(Object.keys(SC_LAB).map(k=>[k,{re:new RegExp('(?:^|[^\\p{L}])(?:'+SC_LAB[k]+')(?:\\s*[:.#№=]+\\s*|\\s+)('+SC_VAL[k]+')','iu'),bare:new RegExp('(?:^|[^\\p{L}])(?:'+SC_LAB[k]+')\\s*[:.#№=]?\\s*$','iu')}]));
+const SC_STOP=new RegExp('\\s+(?:'+Object.values(SC_LAB).join('|')+'|p\\s*\\/\\s*n|pn|product(?:\\s*(?:no|number|#))?|part(?:\\s*no)?|rated|input|output|вход|выход|made\\s+in)(?=$|[\\s:.#№=]).*$','iu');
+const SC_BRANDS=['Hewlett-Packard','HP','Dell','Lenovo','Acer','ASUS','Apple','Samsung','LG','Canon','Epson','Brother','Kyocera','Xerox','Ricoh','Sharp','Panasonic','Toshiba','Sony','Philips','BenQ','ViewSonic','AOC','Iiyama','Cisco','MikroTik','TP-Link','D-Link','Ubiquiti','Huawei','ZTE','Zyxel','Keenetic','Eltex','Yealink','Grandstream','Fanvil','Avaya','Polycom','Jabra','Plantronics','Logitech','Genius','A4Tech','Defender','Sven','Gembird','APC','Eaton','Powercom','Ippon','Hikvision','Dahua','Microsoft','Intel','Gigabyte','MSI','Fujitsu','Xiaomi','Pantum','Konica Minolta','OKI','Netgear','Aruba','Optoma','NEC','Hitachi','Supermicro','Lexmark','HPE'];
+const SC_BRAND_RE=SC_BRANDS.map(b=>[b,new RegExp('(?:^|[^\\p{L}\\p{N}])'+b.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/ /g,'\\s+')+'(?=$|[^\\p{L}\\p{N}])','iu')]);
+function scParse(lines){
+  const found={},txt=lines.map(l=>l.t);
+  txt.forEach((t,i)=>{Object.entries(SC_KEYS).forEach(([k,o])=>{if(found[k])return;const m=t.match(o.re);
+    let v=m&&m[1]?m[1]:(o.bare.test(t)&&txt[i+1]?txt[i+1].split(' ')[0]:'');
+    v=v.replace(SC_STOP,'').replace(/\s{2,}/g,' ').replace(/[\s.,:;]+$/,'').trim();
+    if(v.length>=2&&!new RegExp('^(?:'+SC_LAB[k]+')$','iu').test(v))found[k]=v})});
+  if(!found.maker){const all=' '+txt.join(' ')+' ';for(const[b,re]of SC_BRAND_RE){if(re.test(all)){found.maker=b==='Hewlett-Packard'?'HP':b;break}}}
+  if(found.serial)found.serial=scToLat(found.serial.replace(/\s/g,''));
+  if(found.asset)found.asset=found.asset.replace(/\s/g,'');
+  return found;
 }
-function showCandidates(text,codes){
-  const f=FIELDS.find(x=>x.k===scanField), num=NUMF[scanField];
-  const lines=text.split(/\n+/).map(s=>s.trim()).filter(s=>s.length>1);
-  let tokens=[];
-  lines.forEach(l=>{
-    const m=l.match(/[:#№]\s*([A-Za-z0-9\-\/._ ]{3,})$/);
-    if(m)tokens.push(m[1].trim());
-    tokens.push(l);
-    l.split(/\s+/).forEach(w=>{if(w.length>=4)tokens.push(w.replace(/^[^\w]+|[^\w]+$/g,''))});
-  });
-  tokens=[...new Set(tokens.filter(t=>t.length>=3))];
-  if(num){
-    const withDigit=tokens.filter(t=>/\d/.test(t));
-    if(withDigit.length)tokens=withDigit;
-    const score=t=>(/^[A-Za-z0-9\-\/._]+$/.test(t)?2:0)+(t.length>=5&&t.length<=24?1:0)-(/\s/.test(t)?1:0);
-    tokens.sort((a,b)=>score(b)-score(a));
-  }
-  tokens=tokens.filter(t=>!codes.includes(t)).slice(0,12);
-  const all=[...codes.map(c=>({t:c,code:true})),...tokens.map(t=>({t,code:false}))];
-  const st=$('#ocrStatus');
-  if(!all.length){st.textContent='Текст и штрихкод не найдены. Снимите ближе, при хорошем свете, и выделите только нужную строку.';$('#chips').innerHTML='';return}
-  st.textContent=(codes.length?'Найден штрихкод. ':'')+'Нажмите на нужный вариант — он вставится в поле «'+f.l+'». Если не то — повторите съёмку.';
-  $('#chips').innerHTML=all.map(x=>`<span class="chip${x.code?' code':''}">${x.code?'▮ ':''}${esc(x.t)}</span>`).join('');
-  document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{$('#f_'+scanField).value=c.textContent.replace(/^▮ /,'');toast('Вставлено ✓')});
-  const el=$('#f_'+scanField);if(!el.value&&(num||codes.length))el.value=all[0].t;
-  $('#chips').scrollIntoView({block:'center',behavior:'smooth'});
+function scCandidates(res,k){
+  const num=NUMF[k],out=[],seen=new Set(),add=(t,tag)=>{t=scClean(t).replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N})]+$/gu,'');if(t.length<2||seen.has(t.toLowerCase()))return;seen.add(t.toLowerCase());out.push({t,tag})};
+  if(res.found[k])add(res.found[k],'hit');
+  (res.codes||[]).forEach(c=>add(c,'code'));
+  let toks=[];
+  res.lines.forEach(l=>{const mm=l.t.match(/[:#№]\s*([\p{L}\p{N}\-\/._ ]{3,})$/u);if(mm)toks.push(mm[1]);if(!num||l.t.length<=40)toks.push(l.t);l.t.split(/\s+/).forEach(w=>{if(w.length>=3)toks.push(w)})});
+  toks=toks.map(t=>scClean(t).replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu,'')).filter(t=>t.length>=3);
+  if(num){const d=toks.filter(t=>/\d/.test(t));if(d.length)toks=d;
+    const sc=t=>(/^[A-Za-z0-9\-\/._]+$/.test(t)?3:0)+(/[A-Za-z]/.test(t)&&/\d/.test(t)?2:0)+(t.length>=5&&t.length<=24?1:0)-(/\s/.test(t)?2:0)-(/^(s\/?n|serial|model|p\/?n)/i.test(t)?3:0);
+    toks=[...toks].sort((a,b)=>sc(b)-sc(a))}
+  toks.forEach(t=>add(t,''));
+  if(num)out.slice(0,4).forEach(x=>{if(/\d/.test(x.t)&&/[OoОо]/.test(x.t)){const v=x.t.replace(/[OoОо]/g,'0');if(!seen.has(v.toLowerCase())){seen.add(v.toLowerCase());out.push({t:v,tag:'alt'})}}});
+  return out.slice(0,12);
 }
+
+/* ---- экран результата ---- */
+function scShowResult(r){
+  SC.res=r;r.found=scParse(r.lines);
+  const text=r.lines.map(l=>l.t).join('\n');
+  $('#scResSub').textContent=(r.chars?'Уверенность '+r.conf+'%':'Текст не найден')+' · '+scLangHuman()+(r.skew?' · выровнено '+(r.skew>0?'+':'')+r.skew+'°':'');
+  const th=$('#scThumb');th.innerHTML='';const t=document.createElement('canvas'),k=Math.min(1,900/r.cv.width);t.width=Math.max(1,Math.round(r.cv.width*k));t.height=Math.max(1,Math.round(r.cv.height*k));t.getContext('2d').drawImage(r.cv,0,0,t.width,t.height);th.appendChild(t);
+  r.cv.width=r.cv.height=1;r.cv=null;
+  $('#scTarget').innerHTML=FIELDS.map(f=>`<option value="${f.k}"${f.k===scanField?' selected':''}>${esc(f.l)}</option>`).join('');
+  $('#scText').value=text;
+  const tip=$('#scTip');
+  if(!r.chars&&!r.codes.length){tip.hidden=false;tip.innerHTML='Текст не найден. Подойдите ближе, уберите блик, выделите рамкой только нужный текст.<br><button type="button" data-scback>Изменить настройки</button>'}
+  else if(r.conf<65&&!r.codes.length){tip.hidden=false;tip.innerHTML='Уверенность низкая. Помогает: рамка только вокруг нужной строки, «Против бликов» во вкладке «Улучшить», выравнивание наклона, другой алфавит во вкладке «Текст».<br><button type="button" data-scback>Изменить настройки</button>'}
+  else tip.hidden=true;
+  const fd=$('#scFound'),fk=FIELDS.filter(f=>r.found[f.k]);
+  if(fk.length){fd.hidden=false;fd.innerHTML='<b>Найдено на наклейке</b>'+fk.map(f=>`<div class="sc-frow"><span>${esc(f.l)}</span><code>${esc(r.found[f.k])}</code><button type="button" data-scfill="${f.k}">Вставить</button></div>`).join('')+(fk.length>1?'<button type="button" class="sc-all" data-scfill="*">Заполнить все найденные поля</button>':'')}
+  else{fd.hidden=true;fd.innerHTML=''}
+  scRenderSug();
+  $('#scLines').innerHTML=r.lines.length?r.lines.map((l,i)=>`<button type="button" data-scline="${i}"><i class="${l.c>=80?'':l.c>=60?'m':'l'}"></i><span>${l.words.map(w=>w.c<60?`<u>${esc(w.t)}</u>`:esc(w.t)).join(' ')}</span></button>`).join(''):'<div class="sc-empty">Строк нет</div>';
+  $('#scRes').hidden=false;$('#scRes .sc-rbody').scrollTop=0;scStatus('');
+  setTimeout(()=>$('#scDone').focus({preventScroll:true}),40);
+}
+function scRenderSug(){const r=SC.res;if(!r)return;const k=$('#scTarget').value,c=scCandidates(r,k);
+  $('#scSug').innerHTML=c.length?c.map(x=>`<button type="button" class="${x.tag}" data-scput="${esc(x.t)}">${esc(x.t)}${x.tag==='hit'?'<em>с наклейки</em>':x.tag==='code'?'<em>штрихкод</em>':x.tag==='alt'?'<em>O → 0</em>':''}</button>`).join(''):'<div class="sc-empty">Нет подходящих вариантов — выделите нужное в тексте ниже</div>'}
+$('#scTarget').onchange=scRenderSug;
+function scPut(k,val){
+  val=scClean(String(val).replace(/\n+/g,' '));if(!val)return;
+  const el=$('#f_'+k);if(!el)return;el.value=val;el.dispatchEvent(new Event('input',{bubbles:true}));if((FIELDS.find(f=>f.k===k)||{}).opts)syncSel(k);
+  el.classList.remove('f-flash');void el.offsetWidth;el.classList.add('f-flash');scVibe();toast('Вставлено в «'+scFieldLabel(k)+'» ✓');
+}
+$('#scRes').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.scput!==undefined)scPut($('#scTarget').value,b.dataset.scput);
+  else if(b.dataset.scline!==undefined)scPut($('#scTarget').value,SC.res.lines[+b.dataset.scline].t);
+  else if(b.dataset.scfill){const f=SC.res.found;if(b.dataset.scfill==='*')Object.keys(f).forEach(k=>{if($('#f_'+k))scPut(k,f[k])});else scPut(b.dataset.scfill,f[b.dataset.scfill]);if(b.dataset.scfill==='*')toast('Заполнено полей: '+Object.keys(f).filter(k=>$('#f_'+k)).length+' ✓')}
+  else if(b.hasAttribute('data-scback'))scBackToEditor();
+});
+$('#scInsSel').onclick=()=>{const t=$('#scText'),s=t.value.slice(t.selectionStart,t.selectionEnd);scPut($('#scTarget').value,s||t.value)};
+$('#scCopy').onclick=async()=>{const t=$('#scText');const s=t.value.slice(t.selectionStart,t.selectionEnd)||t.value;try{await navigator.clipboard.writeText(s);toast('Скопировано ✓')}catch(e){t.select();document.execCommand&&document.execCommand('copy');toast('Скопировано ✓')}};
+function scShowEditor(){$('#scRes').hidden=true;scSize();scDraw();setTimeout(()=>$('#scGo').focus({preventScroll:true}),40)}
+function scBackToEditor(){scShowEditor()}
+$('#scBack').onclick=scBackToEditor;
+$('#scDone').onclick=()=>scClose();
+function scToForm(r){ // после закрытия — варианты остаются под формой
+  const k=r.field||scanField,c=scCandidates(r,k).slice(0,8);
+  $('#ocrStatus').textContent=c.length?'Последнее сканирование — нажмите вариант, чтобы вставить в «'+scFieldLabel(k)+'»':'';
+  $('#chips').innerHTML=c.map(x=>`<span class="chip${x.tag==='code'?' code':''}" role="button" tabindex="0">${esc(x.t)}</span>`).join('');
+  document.querySelectorAll('#chips .chip').forEach(ch=>ch.onclick=()=>scPut(k,ch.textContent));
+}
+
+/* ---- настройки ---- */
+function scMarkSeg(set,v){document.querySelectorAll(`#scanModal [data-scset="${set}"] button`).forEach(b=>{const on=b.dataset.v===String(v);b.classList.toggle('on',on);b.setAttribute('aria-pressed',on)})}
+function scSyncUI(){
+  const e=SC.enh;$('#scAuto').setAttribute('aria-pressed',e.auto);
+  [['scBright','bright'],['scContrast','contrast'],['scSharp','sharp']].forEach(([id,k])=>{$('#'+id).value=e[k];$('#'+id+'V').textContent=e[k]});
+  $('#scFine').value=SC.fine;$('#scFineV').textContent=(SC.fine>0?'+':'')+SC.fine+'°';
+  scMarkSeg('bin',scPrefs.bin);scMarkSeg('inv',e.inv);scMarkSeg('alpha',scAlpha());scMarkSeg('psm',scPrefs.psm);scMarkSeg('acc',scPrefs.acc);
+  $('#scKaz').setAttribute('aria-pressed',!!scPrefs.kaz);$('#scBarcode').setAttribute('aria-pressed',!!scPrefs.barcode);$('#scDeskew').setAttribute('aria-pressed',!!scPrefs.deskew);
+}
+document.querySelectorAll('#scanModal [data-scset]').forEach(g=>g.addEventListener('click',e=>{
+  const b=e.target.closest('button[data-v]');if(!b||busy)return;const set=g.dataset.scset,v=b.dataset.v;scVibe();
+  if(set==='preset')return scPreset(v);
+  if(set==='inv'){SC.enh.inv=v}
+  else if(set==='alpha'){scPrefs.alpha[scanField]=v;scSavePrefs();scWarm()}
+  else{scPrefs[set]=v;scSavePrefs()}
+  scMarkSeg(set,v);scPreview();
+}));
+[['scBright','bright'],['scContrast','contrast'],['scSharp','sharp']].forEach(([id,k])=>$('#'+id).addEventListener('input',e=>{SC.enh[k]=+e.target.value;$('#'+id+'V').textContent=e.target.value;scPreview()}));
+$('#scAuto').onclick=()=>{SC.enh.auto=!SC.enh.auto;scSyncUI();scPreview()};
+$('#scKaz').onclick=()=>{scPrefs.kaz=!scPrefs.kaz;scSavePrefs();scSyncUI();scWarm()};
+$('#scDeskew').onclick=()=>{scPrefs.deskew=!scPrefs.deskew;scSavePrefs();scSyncUI()};
+$('#scRotAuto').onclick=()=>{if(busy||!SC.work)return;const c=scRegion(),k=Math.min(1,900/Math.max(c.w,c.h)),cut=scCut(c,k),a=scSkew(cut);cut.width=cut.height=1;
+  if(!a){toast('Текст уже ровный');return}const r=scRel();SC.fine=Math.max(-20,Math.min(20,Math.round((SC.fine+a)*2)/2));$('#scFine').value=SC.fine;$('#scFineV').textContent=(SC.fine>0?'+':'')+SC.fine+'°';scBuild();scFit();scFromRel(r);scDraw();scPreview();scVibe();toast('Выровнено на '+(a>0?'+':'')+a+'°')};
+$('#scBarcode').onclick=()=>{scPrefs.barcode=!scPrefs.barcode;scSavePrefs();scSyncUI()};
+$('#scEnhReset').onclick=()=>{SC.enh={...SC_ENH0};scPrefs.bin='off';scSavePrefs();scSyncUI();scPreview()};
+document.querySelectorAll('#scanModal [data-sctab]').forEach(b=>b.onclick=()=>{
+  const sh=$('#scSheet');if(b.classList.contains('on')){sh.classList.toggle('min');return}sh.classList.remove('min');
+  document.querySelectorAll('#scanModal [data-sctab]').forEach(x=>{const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-selected',on)});
+  document.querySelectorAll('#scanModal [data-scpane]').forEach(p=>p.classList.toggle('on',p.dataset.scpane===b.dataset.sctab));
+  requestAnimationFrame(()=>{scSize();scClampView();scDraw()});
+});
+new ResizeObserver(()=>{if($('#scanModal').classList.contains('on')&&SC.work&&$('#scRes').hidden){scSize();scClampView();scDraw()}}).observe($('#scStage'));
+$('#scanModal').addEventListener('keydown',e=>{if(e.key==='Enter'&&$('#scRes').hidden&&(e.target.id==='scanModal'||e.target.tagName==='CANVAS'||e.target.type==='range')){e.preventDefault();scRun()}});
+
+document.addEventListener('click',e=>{
+  if(e.target.id==='addDeviceType')dictAdd('types');
+  if(e.target.id==='removeDeviceType')openDictModal('types');
+});
 
 /* ============ СПИСОК ============ */
 function updCnt(){$('#cnt').textContent=items.length}
@@ -2316,7 +2803,7 @@ document.querySelector('.upload-zone').onkeydown=e=>{if(e.key==='Enter'||e.key==
 // Focus trap and Escape are limited to open dialogs; close does not commit edits.
 document.addEventListener('keydown',e=>{
  const modal=[...document.querySelectorAll('.modal.on')].at(-1);if(!modal)return;
- if(e.key==='Escape'&&modal.id!=='loginBox'){if(modal.id==='wcPv')wcClose();else modal.classList.remove('on');return}
+ if(e.key==='Escape'&&modal.id!=='loginBox'){if(modal.id==='wcPv')wcClose();else if(modal.id==='scanModal'){if(!busy)scEsc()}else modal.classList.remove('on');return}
  if(e.key==='Tab'){const nodes=[...modal.querySelectorAll('button,input,select,textarea,summary')].filter(x=>!x.disabled&&!x.hidden&&x.getClientRects().length);if(!nodes.length)return;const a=nodes[0],z=nodes.at(-1);if(e.shiftKey&&document.activeElement===a){e.preventDefault();z.focus()}else if(!e.shiftKey&&document.activeElement===z){e.preventDefault();a.focus()}}
 });
 
